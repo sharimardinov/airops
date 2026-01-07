@@ -7,7 +7,7 @@ import (
 	"airops/internal/store"
 )
 
-func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RoutesStats(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
@@ -40,7 +40,13 @@ func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
 		dateTo = &dt
 	}
 
-	limit, err := parseIntParam(r, "limit", 50, 1, 2000)
+	// защита от идиотских диапазонов
+	if dateFrom != nil && dateTo != nil && !dateFrom.Before(*dateTo) {
+		writeJSON(w, http.StatusBadRequest, apiError{Error: "date_from must be < date_to"})
+		return
+	}
+
+	limit, err := parseIntParam(r, "limit", 50, 1, 200)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad limit"})
 		return
@@ -51,13 +57,23 @@ func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.flights.List(r.Context(), store.FlightsFilter{
+	sort := r.URL.Query().Get("sort")
+	if sort == "" {
+		sort = "boarded"
+	}
+	if sort != "boarded" && sort != "load" {
+		writeJSON(w, http.StatusBadRequest, apiError{Error: "invalid sort, allowed: boarded, load"})
+		return
+	}
+
+	items, err := h.stats.Routes(r.Context(), store.RoutesStatsFilter{
 		From:     fromPtr,
 		To:       toPtr,
 		DateFrom: dateFrom,
 		DateTo:   dateTo,
 		Limit:    limit,
 		Offset:   offset,
+		Sort:     sort,
 	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError{Error: err.Error()})
@@ -65,8 +81,11 @@ func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"items":  rows,
-		"limit":  limit,
-		"offset": offset,
+		"items":     items,
+		"date_from": dateFrom,
+		"date_to":   dateTo,
+		"limit":     limit,
+		"offset":    offset,
+		"sort":      sort,
 	})
 }
