@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: airops-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@pg-demo:5432/demo?sslmode=disable
+    ports:
+      - "8080:8080"
+    networks:
+      - pgdemo
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: airops-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks: [obs]
+
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: airops-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    networks: [obs]
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: airops-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+    networks: [obs]
+
+
+volumes:
+  loki-data:
+
+networks:
+  pgdemo:
+    external: true
+    name: pg-demo_default
+  obs:
+    driver: bridge

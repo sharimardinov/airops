@@ -13,7 +13,10 @@ import (
 
 func NewRouter(pool *pgxpool.Pool) http.Handler {
 	r := chi.NewRouter()
+
 	r.Use(mw.Recover())
+	r.Use(mw.RequestID())
+	r.Use(mw.Logging())
 	r.Use(mw.Timeout(4 * time.Second))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
