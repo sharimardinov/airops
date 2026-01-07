@@ -20,7 +20,7 @@ func NewRouter(pool *pgxpool.Pool) http.Handler {
 
 	r.Get("/flights", h.ListFlights)
 
-	r.Get("/flights/{id}/passengers", h.ListFlightPassengers)
+	r.Get("/stats/routes", h.RoutesStats)
 
 	return r
 }
