@@ -1,16 +1,16 @@
 package main
 
 import (
-	"airops/internal/db"
-	"airops/internal/httpapi"
-	"os/signal"
-	"syscall"
-
 	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
+
+	"airops/internal/app"
+	"airops/internal/infra/db/pg"
 )
 
 func main() {
@@ -21,17 +21,20 @@ func main() {
 
 	ctx := context.Background()
 
-	pool, err := db.NewPool(ctx, dsn)
+	pool, err := pg.NewPool(ctx, dsn) // или как у тебя создаётся pool
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer pool.Close()
 
+	a := app.New(pool)
+
 	srv := &http.Server{
-		Addr:              ":8080",
-		Handler:           httpapi.NewRouter(pool),
-		ReadHeaderTimeout: 5 * time.Second,
+		Addr:    ":8080",
+		Handler: a.Handler,
 	}
+
+	log.Println("listening on :8080")
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -43,11 +46,8 @@ func main() {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	<-sigCh
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	srv.Shutdown(ctx)
 
-	log.Println("listening on :8080")
-	log.Fatal(srv.ListenAndServe())
-
+	_ = srv.Shutdown(shutdownCtx)
 }
