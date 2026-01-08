@@ -3,6 +3,8 @@ package main
 import (
 	"airops/internal/db"
 	"airops/internal/httpapi"
+	"os/signal"
+	"syscall"
 
 	"context"
 	"log"
@@ -31,6 +33,21 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	<-sigCh
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	srv.Shutdown(ctx)
+
 	log.Println("listening on :8080")
 	log.Fatal(srv.ListenAndServe())
+
 }

@@ -27,6 +27,12 @@ func NewFlightsService(f FlightsRepo, d FlightDetailsRepo) *FlightsService {
 func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
 	limit := qInt(r, "limit", 100)
 	offset := qInt(r, "offset", 0)
+	if limit < 1 || limit > 1000 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	// Исправлено: добавлены параметры from и to
 	items, err := h.flights.List(r.Context(), time.Time{}, time.Time{}, limit, offset)
