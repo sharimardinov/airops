@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"airops/internal/store"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -10,32 +12,24 @@ import (
 func (h *Handler) ListFlightPassengers(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || id <= 0 {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad flight id"})
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad id"})
 		return
 	}
 
-	limit, err := parseIntParam(r, "limit", 50, 1, 200)
+	limit := qInt(r, "limit", 100)
+	offset := qInt(r, "offset", 0)
+
+	items, err := h.passengers.ListByFlightID(r.Context(), id, limit, offset)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad limit"})
-		return
-	}
-	offset, err := parseIntParam(r, "offset", 0, 0, 1_000_000_000)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad offset"})
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			writeJSON(w, http.StatusNotFound, apiError{Error: "flight not found"})
+		default:
+			writeJSON(w, http.StatusInternalServerError, apiError{Error: "internal server error"})
+		}
 		return
 	}
 
-	items, err := h.passengers.ListByFlight(r.Context(), id, limit, offset)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError{Error: err.Error()})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]any{
-		"flight_id": id,
-		"items":     items,
-		"limit":     limit,
-		"offset":    offset,
-	})
+	writeJSON(w, http.StatusOK, items)
 }

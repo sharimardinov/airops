@@ -15,83 +15,68 @@ func NewFlightsStore(pool *pgxpool.Pool) *FlightsStore {
 	return &FlightsStore{pool: pool}
 }
 
-type FlightRow struct {
-	FlightID           int64     `json:"flight_id"`
-	RouteNo            string    `json:"route_no"`
-	DepartureAirport   string    `json:"departure_airport"`
-	ArrivalAirport     string    `json:"arrival_airport"`
-	ScheduledDeparture time.Time `json:"scheduled_departure"`
-	Status             string    `json:"status"`
-	BoardedCount       int64     `json:"boarded_count"`
+// Добавлен отсутствующий тип Flight
+type Flight struct {
+	FlightID           int64      `json:"flight_id"`
+	RouteNo            string     `json:"route_no"`
+	Status             string     `json:"status"`
+	DepartureAirport   string     `json:"departure_airport"`
+	ArrivalAirport     string     `json:"arrival_airport"`
+	ScheduledDeparture time.Time  `json:"scheduled_departure"`
+	ScheduledArrival   time.Time  `json:"scheduled_arrival"`
+	ActualDeparture    *time.Time `json:"actual_departure,omitempty"`
+	ActualArrival      *time.Time `json:"actual_arrival,omitempty"`
 }
 
-type FlightsFilter struct {
-	From     *string
-	To       *string
-	DateFrom *time.Time
-	DateTo   *time.Time
-	Limit    int
-	Offset   int
-}
-
-func (s *FlightsStore) List(ctx context.Context, f FlightsFilter) ([]FlightRow, error) {
+func (s *FlightsStore) List(
+	ctx context.Context,
+	from, to time.Time,
+	limit, offset int,
+) ([]Flight, error) {
 	const q = `
-with base as (
-  select
-    f.flight_id,
-    f.route_no,
-    r.departure_airport,
-    r.arrival_airport,
-    f.scheduled_departure,
-    f.status
-  from bookings.flights f
+select
+  f.flight_id,
+  f.route_no,
+  f.status,
+  r.departure_airport,
+  r.arrival_airport,
+  f.scheduled_departure,
+  f.scheduled_arrival,
+  f.actual_departure,
+  f.actual_arrival
+from bookings.flights f
 join bookings.routes r
   on r.route_no = f.route_no
-and (f.scheduled_departure <@ r.validity)
-where ($1::text is null or r.departure_airport = $1)
-    and ($2::text is null or r.arrival_airport = $2)
-    and ($3::timestamp is null or f.scheduled_departure >= $3)
-    and ($4::timestamp is null or f.scheduled_departure <  $4)
-  order by f.scheduled_departure desc
-  limit $5 offset $6
-)
-select
-  b.flight_id,
-  b.route_no,
-  b.departure_airport,
-  b.arrival_airport,
-  b.scheduled_departure,
-  b.status,
-  count(bp.ticket_no) as boarded_count
-from base b
-left join bookings.boarding_passes bp
-  on bp.flight_id = b.flight_id
-group by
-  b.flight_id, b.route_no, b.departure_airport, b.arrival_airport, b.scheduled_departure, b.status
-order by b.scheduled_departure desc;
+ and (f.scheduled_departure <@ r.validity)
+where ($1::timestamptz = '0001-01-01'::timestamptz or f.scheduled_departure >= $1)
+  and ($2::timestamptz = '0001-01-01'::timestamptz or f.scheduled_departure < $2)
+order by f.scheduled_departure
+limit $3 offset $4;
 `
 
-	rows, err := s.pool.Query(ctx, q, f.From, f.To, f.DateFrom, f.DateTo, f.Limit, f.Offset)
+	rows, err := s.pool.Query(ctx, q, from, to, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	out := make([]FlightRow, 0, f.Limit)
+	out := make([]Flight, 0, limit)
 	for rows.Next() {
-		var r FlightRow
+		var flight Flight
 		if err := rows.Scan(
-			&r.FlightID,
-			&r.RouteNo,
-			&r.DepartureAirport,
-			&r.ArrivalAirport,
-			&r.ScheduledDeparture,
-			&r.Status,
-			&r.BoardedCount,
+			&flight.FlightID,
+			&flight.RouteNo,
+			&flight.Status,
+			&flight.DepartureAirport,
+			&flight.ArrivalAirport,
+			&flight.ScheduledDeparture,
+			&flight.ScheduledArrival,
+			&flight.ActualDeparture,
+			&flight.ActualArrival,
 		); err != nil {
 			return nil, err
 		}
-		out = append(out, r)
+		out = append(out, flight)
 	}
 	return out, rows.Err()
 }

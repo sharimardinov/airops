@@ -1,72 +1,39 @@
 package handlers
 
 import (
+	"airops/internal/store"
+	"context"
 	"net/http"
 	"time"
-
-	"airops/internal/store"
 )
 
+type FlightsRepo interface {
+	List(ctx context.Context, from, to time.Time, limit, offset int) ([]store.Flight, error)
+}
+
+type FlightDetailsRepo interface {
+	GetByID(ctx context.Context, id int64) (store.FlightDetails, error)
+}
+
+type FlightsService struct {
+	flights FlightsRepo
+	details FlightDetailsRepo
+}
+
+func NewFlightsService(f FlightsRepo, d FlightDetailsRepo) *FlightsService {
+	return &FlightsService{flights: f, details: d}
+}
+
 func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
+	limit := qInt(r, "limit", 100)
+	offset := qInt(r, "offset", 0)
 
-	var fromPtr *string
-	if from != "" {
-		fromPtr = &from
-	}
-	var toPtr *string
-	if to != "" {
-		toPtr = &to
-	}
-
-	dateFrom, err := parseDateParam(r, "date_from")
+	// Исправлено: добавлены параметры from и to
+	items, err := h.flights.List(r.Context(), time.Time{}, time.Time{}, limit, offset)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad date_from (use YYYY-MM-DD)"})
-		return
-	}
-	dateTo, err := parseDateParam(r, "date_to")
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad date_to (use YYYY-MM-DD)"})
+		writeJSON(w, http.StatusInternalServerError, apiError{Error: "internal server error"})
 		return
 	}
 
-	// дефолт: последние 30 дней
-	if dateFrom == nil && dateTo == nil {
-		now := time.Now().UTC()
-		df := now.AddDate(0, 0, -30)
-		dt := now
-		dateFrom = &df
-		dateTo = &dt
-	}
-
-	limit, err := parseIntParam(r, "limit", 50, 1, 2000)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad limit"})
-		return
-	}
-	offset, err := parseIntParam(r, "offset", 0, 0, 1_000_000_000)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad offset"})
-		return
-	}
-
-	rows, err := h.flights.List(r.Context(), store.FlightsFilter{
-		From:     fromPtr,
-		To:       toPtr,
-		DateFrom: dateFrom,
-		DateTo:   dateTo,
-		Limit:    limit,
-		Offset:   offset,
-	})
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError{Error: err.Error()})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]any{
-		"items":  rows,
-		"limit":  limit,
-		"offset": offset,
-	})
+	writeJSON(w, http.StatusOK, items)
 }

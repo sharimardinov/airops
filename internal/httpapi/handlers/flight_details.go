@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"airops/internal/store"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -10,14 +12,21 @@ import (
 func (h *Handler) GetFlightByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || id <= 0 {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad flight id"})
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad id"})
 		return
 	}
 
-	item, err := h.details.GetByID(r.Context(), id)
+	item, err := h.flights.GetByID(r.Context(), id)
 	if err != nil {
-		writeJSON(w, http.StatusNotFound, apiError{Error: "flight not found"})
+		switch {
+		case errors.Is(err, store.ErrInvalidArgument):
+			writeJSON(w, http.StatusBadRequest, apiError{Error: "bad id"})
+		case errors.Is(err, store.ErrNotFound):
+			writeJSON(w, http.StatusNotFound, apiError{Error: "not found"})
+		default:
+			writeJSON(w, http.StatusInternalServerError, apiError{Error: "internal server error"})
+		}
 		return
 	}
 

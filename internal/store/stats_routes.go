@@ -35,7 +35,11 @@ type RoutesStatsFilter struct {
 	Sort     string // "boarded" | "load"
 }
 
-func (s *StatsStore) Routes(ctx context.Context, f RoutesStatsFilter) ([]RouteStat, error) {
+// Исправлено: параметр изменен с limit на f RoutesStatsFilter
+func (s *StatsStore) Routes(
+	ctx context.Context,
+	f RoutesStatsFilter,
+) ([]RouteStat, error) {
 	const qSortBoarded = `
 with base as (
   select

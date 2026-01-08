@@ -1,91 +1,42 @@
 package handlers
 
 import (
+	"airops/internal/store"
 	"net/http"
 	"time"
-
-	"airops/internal/store"
 )
 
 func (h *Handler) RoutesStats(w http.ResponseWriter, r *http.Request) {
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
+	q := r.URL.Query()
 
-	var fromPtr *string
-	if from != "" {
-		fromPtr = &from
-	}
-	var toPtr *string
-	if to != "" {
-		toPtr = &to
+	filter := store.RoutesStatsFilter{
+		Limit:  qInt(r, "limit", 50),
+		Offset: qInt(r, "offset", 0),
+		Sort:   q.Get("sort"),
 	}
 
-	dateFrom, err := parseDateParam(r, "date_from")
+	if from := q.Get("from"); from != "" {
+		filter.From = &from
+	}
+	if to := q.Get("to"); to != "" {
+		filter.To = &to
+	}
+	if dateFrom := q.Get("date_from"); dateFrom != "" {
+		if t, err := time.Parse(time.RFC3339, dateFrom); err == nil {
+			filter.DateFrom = &t
+		}
+	}
+	if dateTo := q.Get("date_to"); dateTo != "" {
+		if t, err := time.Parse(time.RFC3339, dateTo); err == nil {
+			filter.DateTo = &t
+		}
+	}
+
+	items, err := h.stats.Routes(r.Context(), filter)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad date_from (use YYYY-MM-DD)"})
-		return
-	}
-	dateTo, err := parseDateParam(r, "date_to")
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad date_to (use YYYY-MM-DD)"})
+		writeJSON(w, http.StatusInternalServerError, apiError{Error: "internal server error"})
 		return
 	}
 
-	// дефолт: последние 30 дней
-	if dateFrom == nil && dateTo == nil {
-		now := time.Now().UTC()
-		df := now.AddDate(0, 0, -30)
-		dt := now
-		dateFrom = &df
-		dateTo = &dt
-	}
-
-	// защита от идиотских диапазонов
-	if dateFrom != nil && dateTo != nil && !dateFrom.Before(*dateTo) {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "date_from must be < date_to"})
-		return
-	}
-
-	limit, err := parseIntParam(r, "limit", 50, 1, 200)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad limit"})
-		return
-	}
-	offset, err := parseIntParam(r, "offset", 0, 0, 1_000_000_000)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad offset"})
-		return
-	}
-
-	sort := r.URL.Query().Get("sort")
-	if sort == "" {
-		sort = "boarded"
-	}
-	if sort != "boarded" && sort != "load" {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "invalid sort, allowed: boarded, load"})
-		return
-	}
-
-	items, err := h.stats.Routes(r.Context(), store.RoutesStatsFilter{
-		From:     fromPtr,
-		To:       toPtr,
-		DateFrom: dateFrom,
-		DateTo:   dateTo,
-		Limit:    limit,
-		Offset:   offset,
-		Sort:     sort,
-	})
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError{Error: err.Error()})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]any{
-		"items":     items,
-		"date_from": dateFrom,
-		"date_to":   dateTo,
-		"limit":     limit,
-		"offset":    offset,
-		"sort":      sort,
-	})
+	writeJSON(w, http.StatusOK, items)
 }

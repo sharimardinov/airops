@@ -1,21 +1,21 @@
 version: "3.9"
 
 services:
-  api:
-    build: .
-    container_name: airops-api
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@pg-demo:5432/demo?sslmode=disable
-    ports:
-      - "8080:8080"
-    networks:
-      - pgdemo
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
+#  api:
+#    build: .
+#    container_name: airops-api
+#    restart: unless-stopped
+#    environment:
+#      DATABASE_URL: postgres://postgres:postgres@pg-demo:5432/demo?sslmode=disable
+#    ports:
+#      - "8080:8080"
+#    networks:
+#      - pgdemo
+#    logging:
+#      driver: json-file
+#      options:
+#        max-size: "10m"
+#        max-file: "5"
 
   loki:
     image: grafana/loki:3.0.0

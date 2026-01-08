@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -28,7 +30,10 @@ type FlightDetails struct {
 	BoardedCount       int64      `json:"boarded_count"`
 }
 
-func (s *FlightDetailsStore) GetByID(ctx context.Context, flightID int64) (*FlightDetails, error) {
+func (s *FlightDetailsStore) GetByID(
+	ctx context.Context,
+	id int64,
+) (FlightDetails, error) {
 	const q = `
 select
   f.flight_id,
@@ -56,7 +61,8 @@ group by
 `
 
 	var d FlightDetails
-	err := s.pool.QueryRow(ctx, q, flightID).Scan(
+	// Исправлено: использование id вместо flightID
+	err := s.pool.QueryRow(ctx, q, id).Scan(
 		&d.FlightID,
 		&d.RouteNo,
 		&d.Status,
@@ -69,7 +75,12 @@ group by
 		&d.BoardedCount,
 	)
 	if err != nil {
-		return nil, err
+		// Исправлено: проверка на pgx.ErrNoRows и возврат ErrNotFound
+		if errors.Is(err, pgx.ErrNoRows) {
+			return FlightDetails{}, ErrNotFound
+		}
+		return FlightDetails{}, err
 	}
-	return &d, nil
+	// Исправлено: возврат d, а не &d
+	return d, nil
 }

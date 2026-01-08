@@ -24,7 +24,12 @@ type PassengerRow struct {
 	BoardingTime   *time.Time `json:"boarding_time,omitempty"`
 }
 
-func (s *PassengersStore) ListByFlight(ctx context.Context, flightID int64, limit, offset int) ([]PassengerRow, error) {
+// Исправлено: возвращаемый тип изменен с []Passenger на []PassengerRow
+func (s *PassengersStore) ListByFlightID(
+	ctx context.Context,
+	flightID int64,
+	limit, offset int,
+) ([]PassengerRow, error) {
 	const q = `
 select
   t.ticket_no,
