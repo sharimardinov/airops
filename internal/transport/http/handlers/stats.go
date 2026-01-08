@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"airops/internal/transport/http/dto"
 	"net/http"
 	"time"
 )
@@ -16,5 +17,10 @@ func (h *Handler) TopRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, items)
+	out := make([]dto.RouteStatResponse, 0, len(items))
+	for _, s := range items {
+		out = append(out, dto.RouteStatFromModel(s))
+	}
+
+	writeJSON(w, http.StatusOK, out)
 }

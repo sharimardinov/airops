@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"airops/internal/transport/http/dto"
 	"net/http"
 )
 
@@ -20,5 +21,9 @@ func (h *Handler) ListFlightPassengers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, items)
+	out := make([]dto.FlightPassengerResponse, 0, len(items))
+	for _, p := range items {
+		out = append(out, dto.PassengerFromModel(p))
+	}
+	writeJSON(w, http.StatusOK, out)
 }

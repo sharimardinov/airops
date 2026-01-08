@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"airops/internal/transport/http/dto"
 	"net/http"
 	"time"
 )
@@ -17,7 +18,12 @@ func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, items)
+	out := make([]dto.FlightResponse, 0, len(items))
+	for _, f := range items {
+		out = append(out, dto.FlightFromModel(f))
+	}
+
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (h *Handler) GetFlightByID(w http.ResponseWriter, r *http.Request) {
@@ -33,5 +39,6 @@ func (h *Handler) GetFlightByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, item)
+	resp := dto.FlightFromModel(item.Flight)
+	writeJSON(w, http.StatusOK, resp)
 }
