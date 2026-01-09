@@ -1,6 +1,8 @@
-package middleware
+package logger
 
-import "context"
+import (
+	"context"
+)
 
 type ctxKeyLogger struct{}
 

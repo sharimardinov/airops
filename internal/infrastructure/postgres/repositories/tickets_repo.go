@@ -1,5 +1,5 @@
-// internal/domain/models/pg/repo/tickets_repo.go
-package repo
+// internal/domain/models/postgres/repositories/tickets_repo.go
+package repositories
 
 import (
 	"airops/internal/domain/models"

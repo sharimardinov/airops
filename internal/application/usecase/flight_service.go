@@ -31,7 +31,7 @@ func (s *FlightsService) List(
 	return items, nil
 }
 
-// Возвращаем FlightDetails без отдельного repo.
+// Возвращаем FlightDetails без отдельного repositories.
 // Пассажиров берём "всё" (лимит большой). Пагинация у тебя отдельно в /flights/{id}/passengers.
 func (s *FlightsService) GetByID(ctx context.Context, id int64) (models.FlightDetails, error) {
 	if id <= 0 {

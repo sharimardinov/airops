@@ -1,5 +1,4 @@
-// internal/domain/models/pg/repo/airports_repo.go
-package repo
+package repositories
 
 import (
 	"airops/internal/domain/models"
@@ -20,8 +19,7 @@ func NewAirportsRepo(pool *pgxpool.Pool) *AirportsRepo {
 // GetByCode получает аэропорт по коду
 func (r *AirportsRepo) GetByCode(ctx context.Context, code string) (*models.Airport, error) {
 	query := `
-		SELECT airport_code, airport_name, city, country, 
-		       coordinates, timezone
+		SELECT airport_code, airport_name, city, country, timezone
 		FROM bookings.airports
 		WHERE airport_code = $1
 	`
@@ -32,7 +30,6 @@ func (r *AirportsRepo) GetByCode(ctx context.Context, code string) (*models.Airp
 		&airport.Name,
 		&airport.City,
 		&airport.Country,
-		//&airport.Coordinates,
 		&airport.Timezone,
 	)
 	if err != nil {
@@ -45,8 +42,7 @@ func (r *AirportsRepo) GetByCode(ctx context.Context, code string) (*models.Airp
 // List возвращает список всех аэропортов
 func (r *AirportsRepo) List(ctx context.Context) ([]models.Airport, error) {
 	query := `
-		SELECT airport_code, airport_name, city, country, 
-		       coordinates, timezone
+		SELECT airport_code, airport_name, city, country, timezone
 		FROM bookings.airports
 		ORDER BY city, airport_name
 	`
@@ -65,7 +61,6 @@ func (r *AirportsRepo) List(ctx context.Context) ([]models.Airport, error) {
 			&airport.Name,
 			&airport.City,
 			&airport.Country,
-			//&airport.Coordinates,
 			&airport.Timezone,
 		)
 		if err != nil {
@@ -84,8 +79,7 @@ func (r *AirportsRepo) List(ctx context.Context) ([]models.Airport, error) {
 // SearchByCity ищет аэропорты по названию города
 func (r *AirportsRepo) SearchByCity(ctx context.Context, city string) ([]models.Airport, error) {
 	query := `
-		SELECT airport_code, airport_name, city, country, 
-		       coordinates, timezone
+		SELECT airport_code, airport_name, city, country, timezone
 		FROM bookings.airports
 		WHERE LOWER(city) LIKE LOWER($1)
 		ORDER BY city, airport_name
@@ -105,7 +99,6 @@ func (r *AirportsRepo) SearchByCity(ctx context.Context, city string) ([]models.
 			&airport.Name,
 			&airport.City,
 			&airport.Country,
-			//&airport.Coordinates,
 			&airport.Timezone,
 		)
 		if err != nil {
@@ -124,11 +117,9 @@ func (r *AirportsRepo) SearchByCity(ctx context.Context, city string) ([]models.
 // SearchByCountry ищет аэропорты по стране
 func (r *AirportsRepo) SearchByCountry(ctx context.Context, country string) ([]models.Airport, error) {
 	query := `
-		SELECT airport_code, airport_name, city, country, 
-		       coordinates, timezone
-		FROM bookings.airports
-		WHERE LOWER(country) LIKE LOWER($1)
-		ORDER BY city, airport_name
+  SELECT airport_code, airport_name, city, country, timezone
+  FROM bookings.airports
+  ORDER BY city, airport_name
 	`
 
 	rows, err := r.pool.Query(ctx, query, "%"+country+"%")
@@ -145,7 +136,6 @@ func (r *AirportsRepo) SearchByCountry(ctx context.Context, country string) ([]m
 			&airport.Name,
 			&airport.City,
 			&airport.Country,
-			//&airport.Coordinates,
 			&airport.Timezone,
 		)
 		if err != nil {

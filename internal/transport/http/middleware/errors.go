@@ -1,11 +1,12 @@
 package middleware
 
 import (
+	"airops/internal/infrastructure/observability/logger"
 	"net/http"
 )
 
 func ErrorLogging() func(http.Handler) http.Handler {
-	lg := NewJSONLogger()
+	lg := logger.NewJSONLogger()
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +22,7 @@ func ErrorLogging() func(http.Handler) http.Handler {
 			}
 
 			rid := GetRequestID(r.Context())
-			lg.Error(LogEvent{
+			lg.Error(logger.LogEvent{
 				Msg:    "server_error",
 				RID:    rid,
 				Method: r.Method,

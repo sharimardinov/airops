@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"airops/internal/domain"
 	"airops/internal/domain/models"
 	"fmt"
 	"net/http"
@@ -17,14 +18,14 @@ func (h *Handler) SearchFlights(w http.ResponseWriter, r *http.Request) {
 	fareClass := r.URL.Query().Get("fare_class")
 
 	if from == "" || to == "" || dateStr == "" {
-		writeError(w, r, fmt.Errorf("missing required parameters: from, to, date"))
+		writeError(w, r, fmt.Errorf("%w: missing required parameters: from, to, date", domain.ErrBadRequest))
 		return
 	}
 
 	// Парсим дату
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
-		writeError(w, r, fmt.Errorf("invalid date format (use YYYY-MM-DD)"))
+		writeError(w, r, fmt.Errorf("%w: invalid date format (use YYYY-MM-DD)", domain.ErrBadRequest))
 		return
 	}
 
@@ -50,5 +51,3 @@ func (h *Handler) SearchFlights(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, results)
 }
-
-// internal/domain/http/handlers/airports.go

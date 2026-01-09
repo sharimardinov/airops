@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"airops/internal/domain"
+	"airops/internal/infrastructure/observability/logger"
 	"airops/internal/transport/http/middleware"
 	"context"
 	"errors"
@@ -9,9 +10,12 @@ import (
 )
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
-	// error-log (всегда, но level=error)
-	lg := middleware.LoggerFrom(r.Context())
-	lg.Error(middleware.LogEvent{
+	if errors.Is(err, domain.ErrBadRequest) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	lg := logger.LoggerFrom(r.Context())
+	lg.Error(logger.LogEvent{
 		Msg:    "handler_error",
 		RID:    middleware.GetRequestID(r.Context()),
 		Method: r.Method,

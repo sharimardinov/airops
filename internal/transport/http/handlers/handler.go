@@ -2,27 +2,27 @@
 package handlers
 
 import (
-	"airops/internal/usecase"
+	usecase2 "airops/internal/application/usecase"
 )
 
 type Handler struct {
-	flightsService    *usecase.FlightsService
-	passengersService *usecase.PassengersService
-	statsService      *usecase.StatsRoutesService
-	healthService     *usecase.HealthService
-	bookingService    *usecase.BookingService
-	searchService     *usecase.SearchService
-	airportsService   *usecase.AirportsService
+	flightsService    *usecase2.FlightsService
+	passengersService *usecase2.PassengersService
+	statsService      *usecase2.StatsRoutesService
+	healthService     *usecase2.HealthService
+	bookingService    *usecase2.BookingService
+	searchService     *usecase2.SearchService
+	airportsService   *usecase2.AirportsService
 }
 
 func New(
-	flightsService *usecase.FlightsService,
-	passengersService *usecase.PassengersService,
-	statsService *usecase.StatsRoutesService,
-	healthService *usecase.HealthService,
-	bookingService *usecase.BookingService,
-	searchService *usecase.SearchService,
-	airportsService *usecase.AirportsService,
+	flightsService *usecase2.FlightsService,
+	passengersService *usecase2.PassengersService,
+	statsService *usecase2.StatsRoutesService,
+	healthService *usecase2.HealthService,
+	bookingService *usecase2.BookingService,
+	searchService *usecase2.SearchService,
+	airportsService *usecase2.AirportsService,
 ) *Handler {
 	return &Handler{
 		flightsService:    flightsService,

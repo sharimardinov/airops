@@ -2,6 +2,7 @@
 package main
 
 import (
+	"airops/internal/infrastructure/postgres"
 	"context"
 	"log"
 	"os"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"airops/internal/app"
-	"airops/internal/infra/db/pg"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 
 	ctx := context.Background()
 
-	pool, err := pg.NewPool(ctx, dsn)
+	pool, err := postgres.NewPool(ctx, dsn)
 	if err != nil {
 		log.Fatal(err)
 	}

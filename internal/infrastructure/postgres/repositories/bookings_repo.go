@@ -1,5 +1,4 @@
-// internal/domain/models/pg/repo/bookings_repo.go
-package repo
+package repositories
 
 import (
 	"airops/internal/domain/models"
@@ -19,6 +18,7 @@ func NewBookingsRepo(pool *pgxpool.Pool) *BookingsRepo {
 	return &BookingsRepo{pool: pool}
 }
 
+// создает бронирование ВНУТРИ ТРАНЗАКЦИИ
 func (r *BookingsRepo) Create(ctx context.Context, tx pgx.Tx, booking *models.Booking) error {
 	query := `
 		INSERT INTO bookings.bookings 
@@ -34,11 +34,10 @@ func (r *BookingsRepo) Create(ctx context.Context, tx pgx.Tx, booking *models.Bo
 	if err != nil {
 		return fmt.Errorf("create booking: %w", err)
 	}
-
 	return nil
 }
 
-// GetByRef получает бронирование по номеру
+// получает бронирование по номеру
 func (r *BookingsRepo) GetByRef(ctx context.Context, bookRef string) (*models.Booking, error) {
 	query := `
 		SELECT book_ref, book_date, total_amount
@@ -59,7 +58,7 @@ func (r *BookingsRepo) GetByRef(ctx context.Context, bookRef string) (*models.Bo
 	return &booking, nil
 }
 
-// GetByPassenger получает все бронирования пассажира
+// получает все бронирования пассажира
 func (r *BookingsRepo) GetByPassenger(ctx context.Context, passengerID string) ([]models.Booking, error) {
 	query := `
 		SELECT DISTINCT b.book_ref, b.book_date, b.total_amount
@@ -96,14 +95,8 @@ func (r *BookingsRepo) GetByPassenger(ctx context.Context, passengerID string) (
 	return bookings, nil
 }
 
-// Cancel отменяет бронирование (удаляет билеты и само бронирование)
-func (r *BookingsRepo) Cancel(ctx context.Context, bookRef string) error {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
+// отменяет бронирование ВНУТРИ ТРАНЗАКЦИИ
+func (r *BookingsRepo) Cancel(ctx context.Context, tx pgx.Tx, bookRef string) error {
 	// 1. Удаляем boarding passes
 	deleteBoardingPasses := `
 		DELETE FROM bookings.boarding_passes bp
@@ -111,8 +104,7 @@ func (r *BookingsRepo) Cancel(ctx context.Context, bookRef string) error {
 		WHERE bp.ticket_no = t.ticket_no
 		  AND t.book_ref = $1
 	`
-	_, err = tx.Exec(ctx, deleteBoardingPasses, bookRef)
-	if err != nil {
+	if _, err := tx.Exec(ctx, deleteBoardingPasses, bookRef); err != nil {
 		return fmt.Errorf("delete boarding passes: %w", err)
 	}
 
@@ -123,8 +115,7 @@ func (r *BookingsRepo) Cancel(ctx context.Context, bookRef string) error {
 		WHERE s.ticket_no = t.ticket_no
 		  AND t.book_ref = $1
 	`
-	_, err = tx.Exec(ctx, deleteSegments, bookRef)
-	if err != nil {
+	if _, err := tx.Exec(ctx, deleteSegments, bookRef); err != nil {
 		return fmt.Errorf("delete segments: %w", err)
 	}
 
@@ -133,8 +124,7 @@ func (r *BookingsRepo) Cancel(ctx context.Context, bookRef string) error {
 		DELETE FROM bookings.tickets
 		WHERE book_ref = $1
 	`
-	_, err = tx.Exec(ctx, deleteTickets, bookRef)
-	if err != nil {
+	if _, err := tx.Exec(ctx, deleteTickets, bookRef); err != nil {
 		return fmt.Errorf("delete tickets: %w", err)
 	}
 
@@ -147,19 +137,14 @@ func (r *BookingsRepo) Cancel(ctx context.Context, bookRef string) error {
 	if err != nil {
 		return fmt.Errorf("delete booking: %w", err)
 	}
-
 	if result.RowsAffected() == 0 {
 		return fmt.Errorf("booking not found")
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil
 }
 
-// GetWithDetails получает бронирование с билетами и рейсами
+// получает бронирование с билетами и рейсами
 func (r *BookingsRepo) GetWithDetails(ctx context.Context, bookRef string) (*models.BookingDetails, error) {
 	// Получаем само бронирование
 	booking, err := r.GetByRef(ctx, bookRef)

@@ -3,7 +3,7 @@ package usecase
 
 import (
 	"airops/internal/domain/models"
-	"airops/internal/infra/db/pg/repo"
+	repositories2 "airops/internal/infrastructure/postgres/repositories"
 	"context"
 	"crypto/rand"
 	"encoding/base32"
@@ -15,17 +15,17 @@ import (
 )
 
 type BookingService struct {
-	bookingsRepo *repo.BookingsRepo
-	flightsRepo  *repo.FlightsRepo
-	seatsRepo    *repo.SeatsRepo
-	ticketsRepo  *repo.TicketsRepo
+	bookingsRepo *repositories2.BookingsRepo
+	flightsRepo  *repositories2.FlightsRepo
+	seatsRepo    *repositories2.SeatsRepo
+	ticketsRepo  *repositories2.TicketsRepo
 }
 
 func NewBookingService(
-	bookingsRepo *repo.BookingsRepo,
-	flightsRepo *repo.FlightsRepo,
-	seatsRepo *repo.SeatsRepo,
-	ticketsRepo *repo.TicketsRepo,
+	bookingsRepo *repositories2.BookingsRepo,
+	flightsRepo *repositories2.FlightsRepo,
+	seatsRepo *repositories2.SeatsRepo,
+	ticketsRepo *repositories2.TicketsRepo,
 ) *BookingService {
 	return &BookingService{
 		bookingsRepo: bookingsRepo,
@@ -153,7 +153,7 @@ func (s *BookingService) GetByRef(ctx context.Context, bookRef string) (*models.
 	return details, nil
 }
 
-// GetByPassenger получает все бронирования пассажира
+// получает все бронирования пассажира
 func (s *BookingService) GetByPassenger(ctx context.Context, passengerID string) ([]models.Booking, error) {
 	bookings, err := s.bookingsRepo.GetByPassenger(ctx, passengerID)
 	if err != nil {
@@ -163,18 +163,28 @@ func (s *BookingService) GetByPassenger(ctx context.Context, passengerID string)
 	return bookings, nil
 }
 
-// Cancel отменяет бронирование
+// отменяет бронирование
 func (s *BookingService) Cancel(ctx context.Context, bookRef string) error {
-	// Проверяем что бронирование существует
-	_, err := s.bookingsRepo.GetByRef(ctx, bookRef)
+	// Начинаем транзакцию
+	tx, err := s.bookingsRepo.BeginTx(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Проверяем что бронирование существует (можно и без этого, но ок)
+	_, err = s.bookingsRepo.GetByRef(ctx, bookRef)
 	if err != nil {
 		return fmt.Errorf("booking not found: %w", err)
 	}
 
-	// Отменяем бронирование (каскадно удаляет билеты и boarding passes)
-	err = s.bookingsRepo.Cancel(ctx, bookRef)
-	if err != nil {
+	// Удаляем всё каскадно в рамках tx
+	if err := s.bookingsRepo.Cancel(ctx, tx, bookRef); err != nil {
 		return fmt.Errorf("cancel booking: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil

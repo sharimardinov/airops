@@ -2,15 +2,15 @@
 package app
 
 import (
+	usecase2 "airops/internal/application/usecase"
+	repositories2 "airops/internal/infrastructure/postgres/repositories"
 	"context"
 	"fmt"
 	"net/http"
 	"time"
 
-	"airops/internal/infra/db/pg/repo"
 	transporthttp "airops/internal/transport/http"
 	"airops/internal/transport/http/handlers"
-	"airops/internal/usecase"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -21,23 +21,23 @@ type App struct {
 
 func New(pool *pgxpool.Pool, addr string) *App {
 	// Repositories
-	flightsRepo := repo.NewFlightsRepo(pool)
-	passengersRepo := repo.NewPassengersRepo(pool)
-	statsRoutesRepo := repo.NewStatsRoutesRepo(pool)
-	healthRepo := repo.NewHealthRepo(pool)
-	bookingsRepo := repo.NewBookingsRepo(pool)
-	seatsRepo := repo.NewSeatsRepo(pool)
-	ticketsRepo := repo.NewTicketsRepo(pool)
-	airportsRepo := repo.NewAirportsRepo(pool)
+	flightsRepo := repositories2.NewFlightsRepo(pool)
+	passengersRepo := repositories2.NewPassengersRepo(pool)
+	statsRoutesRepo := repositories2.NewStatsRoutesRepo(pool)
+	healthRepo := repositories2.NewHealthRepo(pool)
+	bookingsRepo := repositories2.NewBookingsRepo(pool)
+	seatsRepo := repositories2.NewSeatsRepo(pool)
+	ticketsRepo := repositories2.NewTicketsRepo(pool)
+	airportsRepo := repositories2.NewAirportsRepo(pool)
 
 	// Usecases
-	flightsService := usecase.NewFlightsService(flightsRepo, passengersRepo)
-	passengersService := usecase.NewPassengersService(passengersRepo)
-	statsService := usecase.NewStatsRoutesService(statsRoutesRepo)
-	healthService := usecase.NewHealthService(healthRepo)
-	bookingService := usecase.NewBookingService(bookingsRepo, flightsRepo, seatsRepo, ticketsRepo)
-	searchService := usecase.NewSearchService(flightsRepo, seatsRepo)
-	airportsService := usecase.NewAirportsService(airportsRepo)
+	flightsService := usecase2.NewFlightsService(flightsRepo, passengersRepo)
+	passengersService := usecase2.NewPassengersService(passengersRepo)
+	statsService := usecase2.NewStatsRoutesService(statsRoutesRepo)
+	healthService := usecase2.NewHealthService(healthRepo)
+	bookingService := usecase2.NewBookingService(bookingsRepo, flightsRepo, seatsRepo, ticketsRepo)
+	searchService := usecase2.NewSearchService(flightsRepo, seatsRepo)
+	airportsService := usecase2.NewAirportsService(airportsRepo)
 
 	// Handlers
 	h := handlers.New(

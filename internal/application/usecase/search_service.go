@@ -3,20 +3,20 @@ package usecase
 
 import (
 	"airops/internal/domain/models"
-	"airops/internal/infra/db/pg/repo"
+	repositories2 "airops/internal/infrastructure/postgres/repositories"
 	"context"
 	"fmt"
 	"time"
 )
 
 type SearchService struct {
-	flightsRepo *repo.FlightsRepo
-	seatsRepo   *repo.SeatsRepo
+	flightsRepo *repositories2.FlightsRepo
+	seatsRepo   *repositories2.SeatsRepo
 }
 
 func NewSearchService(
-	flightsRepo *repo.FlightsRepo,
-	seatsRepo *repo.SeatsRepo,
+	flightsRepo *repositories2.FlightsRepo,
+	seatsRepo *repositories2.SeatsRepo,
 ) *SearchService {
 	return &SearchService{
 		flightsRepo: flightsRepo,

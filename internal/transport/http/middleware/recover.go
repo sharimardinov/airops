@@ -1,18 +1,19 @@
 package middleware
 
 import (
+	"airops/internal/infrastructure/observability/logger"
 	"net/http"
 	"runtime/debug"
 )
 
 func Recover() func(http.Handler) http.Handler {
-	lg := NewJSONLogger()
+	lg := logger.NewJSONLogger()
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if rec := recover(); rec != nil {
-					lg.Error(LogEvent{
+					lg.Error(logger.LogEvent{
 						Msg:    "panic",
 						RID:    GetRequestID(r.Context()),
 						Method: r.Method,

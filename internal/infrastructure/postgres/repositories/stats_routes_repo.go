@@ -1,5 +1,5 @@
 // stats_routes_repo.go
-package repo
+package repositories
 
 import (
 	"airops/internal/domain/models"

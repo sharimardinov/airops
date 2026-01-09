@@ -3,16 +3,16 @@ package usecase
 
 import (
 	"airops/internal/domain/models"
-	"airops/internal/infra/db/pg/repo"
+	"airops/internal/infrastructure/postgres/repositories"
 	"context"
 	"fmt"
 )
 
 type AirportsService struct {
-	airportsRepo *repo.AirportsRepo
+	airportsRepo *repositories.AirportsRepo
 }
 
-func NewAirportsService(airportsRepo *repo.AirportsRepo) *AirportsService {
+func NewAirportsService(airportsRepo *repositories.AirportsRepo) *AirportsService {
 	return &AirportsService{
 		airportsRepo: airportsRepo,
 	}

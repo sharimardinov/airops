@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"airops/internal/infrastructure/observability/logger"
 	"net"
 	"net/http"
 	"strings"
@@ -10,7 +11,7 @@ import (
 )
 
 func Logging() func(http.Handler) http.Handler {
-	lg := NewJSONLogger()
+	lg := logger.NewJSONLogger()
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -18,7 +19,7 @@ func Logging() func(http.Handler) http.Handler {
 			tw := &trackedWriter{ResponseWriter: w}
 
 			// кладём логгер в контекст (чтобы handlers могли писать error-логи)
-			r = r.WithContext(WithLogger(r.Context(), lg))
+			r = r.WithContext(logger.WithLogger(r.Context(), lg))
 
 			next.ServeHTTP(tw, r)
 
@@ -30,7 +31,7 @@ func Logging() func(http.Handler) http.Handler {
 			route := RoutePattern(r)
 			path := normalizePath(r.URL.Path)
 
-			lg.Info(LogEvent{
+			lg.Info(logger.LogEvent{
 				Msg:    "request",
 				RID:    GetRequestID(r.Context()),
 				Method: r.Method,
