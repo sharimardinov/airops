@@ -13,7 +13,7 @@ func (h *Handler) TopRoutes(w http.ResponseWriter, r *http.Request) {
 
 	items, err := h.stats.TopRoutes(r.Context(), from, to, limit)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, r, err)
 		return
 	}
 

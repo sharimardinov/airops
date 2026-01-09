@@ -17,7 +17,7 @@ func (h *Handler) ListFlightPassengers(w http.ResponseWriter, r *http.Request) {
 
 	items, err := h.passengers.ListByFlightID(r.Context(), id, limit, offset)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, r, err)
 		return
 	}
 

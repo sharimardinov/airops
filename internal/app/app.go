@@ -28,7 +28,10 @@ func New(pool *pgxpool.Pool) *App {
 	statsUC := usecase.NewStatsRoutesService(statsRepo)
 
 	// handlers
-	h := handlers.New(flightsUC, passengersUC, statsUC)
+	healthRepo := repo.NewHealthRepo(pool)
+	healthUC := usecase.NewHealthService(healthRepo)
+
+	h := handlers.New(flightsUC, passengersUC, statsUC, healthUC)
 
 	// router (package http => импорт алиасом transporthttp)
 	r := transporthttp.New(h)

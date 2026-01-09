@@ -14,7 +14,7 @@ func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
 
 	items, err := h.flights.List(r.Context(), from, to, limit, offset)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, r, err)
 		return
 	}
 
@@ -35,7 +35,7 @@ func (h *Handler) GetFlightByID(w http.ResponseWriter, r *http.Request) {
 
 	item, err := h.flights.GetByID(r.Context(), id)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, r, err)
 		return
 	}
 
