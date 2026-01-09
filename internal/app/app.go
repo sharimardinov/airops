@@ -1,7 +1,11 @@
+// internal/app/app.go
 package app
 
 import (
-	nethttp "net/http"
+	"context"
+	"fmt"
+	"net/http"
+	"time"
 
 	"airops/internal/infra/db/pg/repo"
 	transporthttp "airops/internal/transport/http"
@@ -12,29 +16,60 @@ import (
 )
 
 type App struct {
-	Handler nethttp.Handler
+	server *http.Server
 }
 
-func New(pool *pgxpool.Pool) *App {
-	// repos (имена 1 в 1 как на твоих скринах)
+func New(pool *pgxpool.Pool, addr string) *App {
+	// Repositories
 	flightsRepo := repo.NewFlightsRepo(pool)
 	passengersRepo := repo.NewPassengersRepo(pool)
-	statsRepo := repo.NewStatsRoutesRepo(pool)
-
-	// usecases
-	// ВАЖНО: FlightsService теперь будет принимать passengersRepo
-	flightsUC := usecase.NewFlightsService(flightsRepo, passengersRepo)
-	passengersUC := usecase.NewPassengersService(passengersRepo)
-	statsUC := usecase.NewStatsRoutesService(statsRepo)
-
-	// handlers
+	statsRoutesRepo := repo.NewStatsRoutesRepo(pool)
 	healthRepo := repo.NewHealthRepo(pool)
-	healthUC := usecase.NewHealthService(healthRepo)
+	bookingsRepo := repo.NewBookingsRepo(pool)
+	seatsRepo := repo.NewSeatsRepo(pool)
+	ticketsRepo := repo.NewTicketsRepo(pool)
+	airportsRepo := repo.NewAirportsRepo(pool)
 
-	h := handlers.New(flightsUC, passengersUC, statsUC, healthUC)
+	// Usecases
+	flightsService := usecase.NewFlightsService(flightsRepo, passengersRepo)
+	passengersService := usecase.NewPassengersService(passengersRepo)
+	statsService := usecase.NewStatsRoutesService(statsRoutesRepo)
+	healthService := usecase.NewHealthService(healthRepo)
+	bookingService := usecase.NewBookingService(bookingsRepo, flightsRepo, seatsRepo, ticketsRepo)
+	searchService := usecase.NewSearchService(flightsRepo, seatsRepo)
+	airportsService := usecase.NewAirportsService(airportsRepo)
 
-	// router (package http => импорт алиасом transporthttp)
-	r := transporthttp.New(h)
+	// Handlers
+	h := handlers.New(
+		flightsService,
+		passengersService,
+		statsService,
+		healthService,
+		bookingService,
+		searchService,
+		airportsService,
+	)
 
-	return &App{Handler: r}
+	// Router
+	router := transporthttp.New(h)
+
+	// Server
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      router,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	return &App{server: server}
+}
+
+func (a *App) Run() error {
+	fmt.Printf("Starting server on %s\n", a.server.Addr)
+	return a.server.ListenAndServe()
+}
+
+func (a *App) Shutdown(ctx context.Context) error {
+	return a.server.Shutdown(ctx)
 }

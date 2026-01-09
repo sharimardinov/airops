@@ -12,7 +12,7 @@ func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
 
 	var from, to time.Time
 
-	items, err := h.flights.List(r.Context(), from, to, limit, offset)
+	items, err := h.flightsService.List(r.Context(), from, to, limit, offset)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -33,7 +33,7 @@ func (h *Handler) GetFlightByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := h.flights.GetByID(r.Context(), id)
+	item, err := h.flightsService.GetByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return

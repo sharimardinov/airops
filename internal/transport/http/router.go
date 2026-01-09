@@ -1,8 +1,9 @@
+// internal/domain/http/router.go
 package http
 
 import (
 	"airops/internal/transport/http/handlers"
-	middleware "airops/internal/transport/http/middleware"
+	"airops/internal/transport/http/middleware"
 	"net/http"
 	"time"
 
@@ -13,29 +14,51 @@ import (
 func New(h *handlers.Handler) http.Handler {
 	r := chi.NewRouter()
 
-	// middleware
+	// Middleware
 	r.Use(middleware.RequestID())
-	r.Use(middleware.Metrics())
 	r.Use(middleware.Logging())
 	r.Use(middleware.Recover())
-	r.Use(middleware.ErrorLogging())
+	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(middleware.Metrics())
 
-	// routes
-
-	r.Handle("/metrics", promhttp.Handler())
+	// Health checks
 	r.Get("/health", h.Health)
 	r.Get("/ready", h.Ready)
+	r.Handle("/metrics", promhttp.Handler())
 
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.Timeout(20 * time.Second)) // или 10s
-
-		r.Route("/flights", func(r chi.Router) {
-			r.Get("/", h.ListFlights)
-			r.Get("/{id}", h.GetFlightByID)
-			r.Get("/{id}/passengers", h.ListFlightPassengers)
-		})
-
-		r.Get("/stats/routes", h.TopRoutes)
+	r.Get("/flights", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/api/v1/flights", http.StatusTemporaryRedirect)
 	})
+	r.Get("/airports", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/api/v1/airports", http.StatusTemporaryRedirect)
+	})
+
+	// API v1
+	r.Route("/api/v1", func(r chi.Router) {
+		// Flights
+		r.Get("/flights", h.ListFlights)
+		r.Get("/flights/{id}", h.GetFlightByID)
+		r.Get("/flights/search", h.SearchFlights) // NEW
+
+		// Airports
+		r.Get("/airports", h.ListAirports)          // NEW
+		r.Get("/airports/search", h.SearchAirports) // NEW
+		r.Get("/airports/{code}", h.GetAirport)     // NEW
+
+		// Passengers
+		r.Get("/flights/{id}/passengers", h.ListFlightPassengers)
+
+		// Stats
+		r.Get("/stats/routes", h.TopRoutes)
+
+		// Bookings
+		r.Post("/bookings", h.CreateBooking)             // NEW
+		r.Get("/bookings/{bookRef}", h.GetBooking)       // NEW
+		r.Delete("/bookings/{bookRef}", h.CancelBooking) // NEW
+
+		// Passenger bookings
+		r.Get("/passengers/{passengerID}/bookings", h.GetPassengerBookings) // NEW
+	})
+
 	return r
 }

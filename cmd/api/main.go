@@ -1,9 +1,9 @@
+// cmd/api/main.go
 package main
 
 import (
 	"context"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,27 +21,22 @@ func main() {
 
 	ctx := context.Background()
 
-	pool, err := pg.NewPool(ctx, dsn) // или как у тебя создаётся pool
+	pool, err := pg.NewPool(ctx, dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer pool.Close()
 
-	a := app.New(pool)
+	a := app.New(pool, ":8080")
 
-	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: a.Handler,
-	}
-
-	log.Println("listening on :8080")
-
+	// старт
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := a.Run(); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
+	// graceful shutdown
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	<-sigCh
@@ -49,5 +44,5 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_ = srv.Shutdown(shutdownCtx)
+	_ = a.Shutdown(shutdownCtx)
 }

@@ -14,10 +14,3 @@ type Flight struct {
 	ActualDeparture    *time.Time `json:"actual_departure,omitempty"`
 	ActualArrival      *time.Time `json:"actual_arrival,omitempty"`
 }
-
-// RouteStat — отчётная модель (read-model) для API/статистики.
-type RouteStat struct {
-	DepartureAirport string `json:"departure_airport"`
-	ArrivalAirport   string `json:"arrival_airport"`
-	FlightsCount     int64  `json:"flights_count"`
-}

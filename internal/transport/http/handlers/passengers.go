@@ -15,7 +15,7 @@ func (h *Handler) ListFlightPassengers(w http.ResponseWriter, r *http.Request) {
 	limit := qInt(r, "limit", 100)
 	offset := qInt(r, "offset", 0)
 
-	items, err := h.passengers.ListByFlightID(r.Context(), id, limit, offset)
+	items, err := h.passengersService.ListByFlightID(r.Context(), id, limit, offset)
 	if err != nil {
 		writeError(w, r, err)
 		return

@@ -5,7 +5,7 @@ export const options = {
     scenarios: {
         passengers: {
             executor: "constant-arrival-rate",
-            rate: 120,          // стартуй 120 rps
+            rate: 400,
             timeUnit: "1s",
             duration: "60s",
             preAllocatedVUs: 100,
@@ -14,7 +14,7 @@ export const options = {
         },
         flights: {
             executor: "constant-arrival-rate",
-            rate: 20,
+            rate: 100,
             timeUnit: "1s",
             duration: "60s",
             preAllocatedVUs: 20,
@@ -23,7 +23,7 @@ export const options = {
         },
         stats: {
             executor: "constant-arrival-rate",
-            rate: 2,
+            rate: 10,
             timeUnit: "1s",
             duration: "60s",
             preAllocatedVUs: 5,
@@ -33,31 +33,47 @@ export const options = {
     },
     thresholds: {
         http_req_failed: ["rate<0.02"],
-        http_req_duration: ["p(95)<1000"], // потом ужесточишь
+        "http_req_duration{ name:GET /flights }": ["p(95)<200"],
+        "http_req_duration{ name:GET /flights/:id/passengers }": ["p(95)<300"],
+        "http_req_duration{ name:GET /stats/routes }": ["p(95)<500"],
     },
 };
 
-const BASE = __ENV.BASE_URL || "http://localhost:8080";
+const BASE = (__ENV.BASE_URL || "http://localhost:8080").replace(/\/$/, "");
+const API = `${BASE}/api/v1`;
 
 function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 export function passengers() {
-    const id = randInt(1, 20000); // подстрой под диапазон flight_id
-    const res = http.get(`${BASE}/flights/${id}/passengers?limit=200`);
-    check(res, { "passengers 200": (r) => r.status === 200 });
+    const id = randInt(
+        parseInt(__ENV.FLIGHT_ID_MIN || "1", 10),
+        parseInt(__ENV.FLIGHT_ID_MAX || "20000", 10)
+    );
+
+    const url = `${API}/flights/${id}/passengers?limit=200&offset=0`;
+    const res = http.get(url, { tags: { name: "GET /flights/:id/passengers" } });
+
+    check(res, { "passengers: 200": (r) => r.status === 200 });
+    sleep(0.01);
 }
 
 export function flights() {
-    const res = http.get(`${BASE}/flights?limit=200`);
-    check(res, { "flights 200": (r) => r.status === 200 });
+    const url = `${API}/flights?limit=200&offset=0`;
+    const res = http.get(url, { tags: { name: "GET /flights" } });
+
+    check(res, { "flights: 200": (r) => r.status === 200 });
+    sleep(0.01);
 }
 
 export function stats() {
-    // лучше всегда передавать диапазон, иначе будешь считать всю таблицу
-    const from = encodeURIComponent("2017-01-01T00:00:00Z");
-    const to   = encodeURIComponent("2017-02-01T00:00:00Z");
-    const res = http.get(`${BASE}/stats/routes?from=${from}&to=${to}&limit=20`);
-    check(res, { "stats 200": (r) => r.status === 200 });
+    const from = __ENV.STATS_FROM || "2017-01-01";
+    const to = __ENV.STATS_TO || "2017-02-01";
+
+    const url = `${API}/stats/routes?from=${from}&to=${to}&limit=20`;
+    const res = http.get(url, { tags: { name: "GET /stats/routes" } });
+
+    check(res, { "stats: 200": (r) => r.status === 200 });
+    sleep(0.01);
 }

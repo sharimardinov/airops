@@ -1,24 +1,36 @@
+// internal/domain/http/handlers/handler.go
 package handlers
 
-import "airops/internal/usecase"
+import (
+	"airops/internal/usecase"
+)
 
 type Handler struct {
-	flights    *usecase.FlightsService
-	passengers *usecase.PassengersService
-	stats      *usecase.StatsRoutesService
-	health     *usecase.HealthService
+	flightsService    *usecase.FlightsService
+	passengersService *usecase.PassengersService
+	statsService      *usecase.StatsRoutesService
+	healthService     *usecase.HealthService
+	bookingService    *usecase.BookingService
+	searchService     *usecase.SearchService
+	airportsService   *usecase.AirportsService
 }
 
 func New(
-	flights *usecase.FlightsService,
-	passengers *usecase.PassengersService,
-	stats *usecase.StatsRoutesService,
-	health *usecase.HealthService,
+	flightsService *usecase.FlightsService,
+	passengersService *usecase.PassengersService,
+	statsService *usecase.StatsRoutesService,
+	healthService *usecase.HealthService,
+	bookingService *usecase.BookingService,
+	searchService *usecase.SearchService,
+	airportsService *usecase.AirportsService,
 ) *Handler {
 	return &Handler{
-		flights:    flights,
-		passengers: passengers,
-		stats:      stats,
-		health:     health,
+		flightsService:    flightsService,
+		passengersService: passengersService,
+		statsService:      statsService,
+		healthService:     healthService,
+		bookingService:    bookingService,
+		searchService:     searchService,
+		airportsService:   airportsService,
 	}
 }
