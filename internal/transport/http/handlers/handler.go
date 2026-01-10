@@ -1,30 +1,42 @@
-// internal/domain/http/handlers/handler.go
 package handlers
 
 import (
-	usecase2 "airops/internal/application/usecase"
+	"airops/internal/application/usecase"
+	"net/http"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Handler struct {
-	flightsService    *usecase2.FlightsService
-	passengersService *usecase2.PassengersService
-	statsService      *usecase2.StatsRoutesService
-	healthService     *usecase2.HealthService
-	bookingService    *usecase2.BookingService
-	searchService     *usecase2.SearchService
-	airportsService   *usecase2.AirportsService
+	pool              *pgxpool.Pool
+	flightsService    *usecase.FlightsService
+	passengersService *usecase.PassengersService
+	statsService      *usecase.StatsRoutesService
+	healthService     *usecase.HealthService
+	bookingService    *usecase.BookingService
+	searchService     *usecase.SearchService
+	airportsService   *usecase.AirportsService
+	airplanesService  *usecase.AirplanesService
+}
+
+func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func New(
-	flightsService *usecase2.FlightsService,
-	passengersService *usecase2.PassengersService,
-	statsService *usecase2.StatsRoutesService,
-	healthService *usecase2.HealthService,
-	bookingService *usecase2.BookingService,
-	searchService *usecase2.SearchService,
-	airportsService *usecase2.AirportsService,
+	pool *pgxpool.Pool,
+	flightsService *usecase.FlightsService,
+	passengersService *usecase.PassengersService,
+	statsService *usecase.StatsRoutesService,
+	healthService *usecase.HealthService,
+	bookingService *usecase.BookingService,
+	searchService *usecase.SearchService,
+	airportsService *usecase.AirportsService,
+	airplanesService *usecase.AirplanesService, // ✨ NEW
 ) *Handler {
 	return &Handler{
+		pool:              pool,
 		flightsService:    flightsService,
 		passengersService: passengersService,
 		statsService:      statsService,
@@ -32,5 +44,6 @@ func New(
 		bookingService:    bookingService,
 		searchService:     searchService,
 		airportsService:   airportsService,
+		airplanesService:  airplanesService, // ✨ NEW
 	}
 }

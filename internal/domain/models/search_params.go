@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type FlightSearchParams struct {
 	DepartureAirport string    `json:"departure_airport"`
@@ -17,4 +20,20 @@ type BookingRequest struct {
 	PassengerID   string   `json:"passenger_id"`
 	Seats         []string `json:"seats"`      // ["1A", "1B"]
 	FareClass     string   `json:"fare_class"` // Economy, Comfort, Business
+}
+
+func (p *FlightSearchParams) Validate() error {
+	if p.DepartureAirport == "" {
+		return errors.New("departure_airport is required")
+	}
+	if p.ArrivalAirport == "" {
+		return errors.New("arrival_airport is required")
+	}
+	if p.DepartureDate.IsZero() {
+		return errors.New("departure_date is required")
+	}
+	if p.Passengers <= 0 {
+		return errors.New("passengers must be positive")
+	}
+	return nil
 }

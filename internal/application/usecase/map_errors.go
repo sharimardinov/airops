@@ -5,6 +5,8 @@ import (
 	"airops/internal/domain"
 	"context"
 	"errors"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func MapStoreErr(err error) error {
@@ -12,13 +14,14 @@ func MapStoreErr(err error) error {
 		return nil
 	}
 
-	// Уже доменные — не трогаем
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrNotFound
+	}
+
 	if errors.Is(err, domain.ErrNotFound) || errors.Is(err, domain.ErrInvalidArgument) {
 		return err
 	}
 
-	// Нормальная история для сервисного слоя: пробрасываем как есть,
-	// но в будущем тут можно маппить таймауты/отмену на свои доменные ошибки.
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return err
 	}

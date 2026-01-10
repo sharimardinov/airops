@@ -2,45 +2,54 @@
 package app
 
 import (
-	usecase2 "airops/internal/application/usecase"
-	repositories2 "airops/internal/infrastructure/postgres/repositories"
+	"airops/internal/application/usecase"
+	"airops/internal/infrastructure/postgres/repositories"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	transporthttp "airops/internal/transport/http"
 	"airops/internal/transport/http/handlers"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	//"golang.org/x/tools/go/cfg"
 )
 
 type App struct {
 	server *http.Server
+	pool   *pgxpool.Pool
 }
 
 func New(pool *pgxpool.Pool, addr string) *App {
 	// Repositories
-	flightsRepo := repositories2.NewFlightsRepo(pool)
-	passengersRepo := repositories2.NewPassengersRepo(pool)
-	statsRoutesRepo := repositories2.NewStatsRoutesRepo(pool)
-	healthRepo := repositories2.NewHealthRepo(pool)
-	bookingsRepo := repositories2.NewBookingsRepo(pool)
-	seatsRepo := repositories2.NewSeatsRepo(pool)
-	ticketsRepo := repositories2.NewTicketsRepo(pool)
-	airportsRepo := repositories2.NewAirportsRepo(pool)
+	flightsRepo := repositories.NewFlightsRepo(pool)
+	passengersRepo := repositories.NewPassengersRepo(pool)
+	statsRoutesRepo := repositories.NewStatsRoutesRepo(pool)
+	healthRepo := repositories.NewHealthRepo(pool)
+	bookingsRepo := repositories.NewBookingsRepo(pool)
+	seatsRepo := repositories.NewSeatsRepo(pool)
+	ticketsRepo := repositories.NewTicketsRepo(pool)
+	airportsRepo := repositories.NewAirportsRepo(pool)
+	airplanesRepo := repositories.NewAirplanesRepo(pool) // ✨ NEW
 
-	// Usecases
-	flightsService := usecase2.NewFlightsService(flightsRepo, passengersRepo)
-	passengersService := usecase2.NewPassengersService(passengersRepo)
-	statsService := usecase2.NewStatsRoutesService(statsRoutesRepo)
-	healthService := usecase2.NewHealthService(healthRepo)
-	bookingService := usecase2.NewBookingService(bookingsRepo, flightsRepo, seatsRepo, ticketsRepo)
-	searchService := usecase2.NewSearchService(flightsRepo, seatsRepo)
-	airportsService := usecase2.NewAirportsService(airportsRepo)
+	// Services
+	flightsService := usecase.NewFlightsService(flightsRepo, passengersRepo)
+	passengersService := usecase.NewPassengersService(passengersRepo)
+	statsService := usecase.NewStatsRoutesService(statsRoutesRepo)
+	healthService := usecase.NewHealthService(healthRepo)
+	bookingService := usecase.NewBookingService(bookingsRepo, flightsRepo, seatsRepo, ticketsRepo)
+	searchService := usecase.NewSearchService(flightsRepo, seatsRepo)
+	airportsService := usecase.NewAirportsService(airportsRepo)
+	airplanesService := usecase.NewAirplanesService(airplanesRepo) // ✨ NEW
 
 	// Handlers
 	h := handlers.New(
+		pool,
 		flightsService,
 		passengersService,
 		statsService,
@@ -48,9 +57,9 @@ func New(pool *pgxpool.Pool, addr string) *App {
 		bookingService,
 		searchService,
 		airportsService,
+		airplanesService,
 	)
 
-	// Router
 	router := transporthttp.New(h)
 
 	// Server
@@ -62,14 +71,47 @@ func New(pool *pgxpool.Pool, addr string) *App {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	return &App{server: server}
+	return &App{
+		server: server,
+		pool:   pool,
+	}
 }
 
 func (a *App) Run() error {
-	fmt.Printf("Starting server on %s\n", a.server.Addr)
-	return a.server.ListenAndServe()
+	// Запуск сервера в горутине
+	go func() {
+		log.Printf("🚀 Starting server on %s", a.server.Addr)
+		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("❌ Server failed: %v", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("🛑 Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := a.Shutdown(ctx); err != nil {
+		return fmt.Errorf("shutdown failed: %w", err)
+	}
+
+	log.Println("✅ Server stopped gracefully")
+	return nil
 }
 
 func (a *App) Shutdown(ctx context.Context) error {
-	return a.server.Shutdown(ctx)
+	// Закрываем HTTP сервер
+	if err := a.server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("http server shutdown: %w", err)
+	}
+
+	// Закрываем пул соединений с БД
+	a.pool.Close()
+
+	return nil
 }

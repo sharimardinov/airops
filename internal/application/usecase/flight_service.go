@@ -1,56 +1,74 @@
+// ================================================
+// internal/application/usecase/flight_service.go
+// ================================================
 package usecase
 
 import (
 	"airops/internal/domain"
 	"airops/internal/domain/models"
+	"airops/internal/infrastructure/postgres/repositories"
 	"context"
 	"time"
 )
 
 type FlightsService struct {
-	flights    domain.FlightsRepo
-	passengers domain.PassengersRepo
+	flightsRepo    domain.FlightsRepo
+	passengersRepo domain.PassengersRepo
 }
 
-func NewFlightsService(f domain.FlightsRepo, p domain.PassengersRepo) *FlightsService {
+func NewFlightsService(flightsRepo *repositories.FlightsRepo, passengersRepo domain.PassengersRepo) *FlightsService {
 	return &FlightsService{
-		flights:    f,
-		passengers: p,
+		flightsRepo:    flightsRepo,
+		passengersRepo: passengersRepo,
 	}
 }
 
-func (s *FlightsService) List(
-	ctx context.Context,
-	from, to time.Time,
-	limit, offset int,
-) ([]models.Flight, error) {
-	items, err := s.flights.List(ctx, from, to, limit, offset)
+// GetByID получает детальную информацию о рейсе
+func (s *FlightsService) GetByID(ctx context.Context, id int64) (models.FlightDetails, error) {
+	// Получаем базовую информацию о рейсе
+	flight, err := s.flightsRepo.GetByID(ctx, id)
+	if err != nil {
+		return models.FlightDetails{}, MapStoreErr(err)
+	}
+
+	// ✅ ИСПРАВЛЕНО: добавлены недостающие параметры
+	// Сигнатура: ListByFlightID(ctx, flightID, offset, limit)
+	passengers, err := s.passengersRepo.ListByFlightID(ctx, id, 0, 1000)
+	if err != nil {
+		return models.FlightDetails{}, MapStoreErr(err)
+	}
+
+	// Создаем FlightDetails
+	details := models.FlightDetails{
+		FlightID:           flight.FlightID,
+		RouteNo:            flight.RouteNo,
+		Status:             flight.Status,
+		ScheduledDeparture: flight.ScheduledDeparture,
+		ScheduledArrival:   flight.ScheduledArrival,
+		ActualDeparture:    flight.ActualDeparture,
+		ActualArrival:      flight.ActualArrival,
+		Passengers:         passengers,
+	}
+
+	return details, nil
+}
+
+// List возвращает список рейсов
+func (s *FlightsService) List(ctx context.Context, date time.Time, limit int) ([]models.Flight, error) {
+	// Сигнатура: List(ctx, dateFrom, dateTo, offset, limit)
+
+	// Вариант 1: Если нужны рейсы только за один день
+	dateEnd := date.Add(24 * time.Hour)
+	flights, err := s.flightsRepo.List(ctx, date, dateEnd, 0, limit)
+
 	if err != nil {
 		return nil, MapStoreErr(err)
 	}
-	return items, nil
+	return flights, nil
 }
 
-// Возвращаем FlightDetails без отдельного repositories.
-// Пассажиров берём "всё" (лимит большой). Пагинация у тебя отдельно в /flights/{id}/passengers.
-func (s *FlightsService) GetByID(ctx context.Context, id int64) (models.FlightDetails, error) {
-	if id <= 0 {
-		return models.FlightDetails{}, domain.ErrInvalidArgument
-	}
-
-	flight, err := s.flights.GetByID(ctx, id)
-	if err != nil {
-		return models.FlightDetails{}, MapStoreErr(err)
-	}
-
-	// если боишься больших рейсов — поставь лимит 1000/5000, но сейчас так проще
-	passengers, err := s.passengers.ListByFlightID(ctx, id, 10000, 0)
-	if err != nil {
-		return models.FlightDetails{}, MapStoreErr(err)
-	}
-
-	return models.FlightDetails{
-		Flight:     flight,
-		Passengers: passengers,
-	}, nil
+// Вспомогательный метод (если нужен)
+func (s *FlightsService) listByDate(ctx context.Context, date time.Time, limit int) ([]models.Flight, error) {
+	dateEnd := date.Add(24 * time.Hour)
+	return s.flightsRepo.List(ctx, date, dateEnd, 0, limit)
 }

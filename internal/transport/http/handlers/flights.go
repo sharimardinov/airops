@@ -1,3 +1,4 @@
+// internal/transport/http/handlers/flights.go
 package handlers
 
 import (
@@ -6,39 +7,55 @@ import (
 	"time"
 )
 
+// ListFlights возвращает список рейсов
 func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
-	limit := qInt(r, "limit", 100)
-	offset := qInt(r, "offset", 0)
+	// Парсим дату из query параметра
+	dateStr := r.URL.Query().Get("date")
+	if dateStr == "" {
+		dateStr = time.Now().Format("2006-01-02")
+	}
 
-	var from, to time.Time
-
-	items, err := h.flightsService.List(r.Context(), from, to, limit, offset)
+	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
 
-	out := make([]dto.FlightResponse, 0, len(items))
-	for _, f := range items {
-		out = append(out, dto.FlightFromModel(f))
+	limit := qInt(r, "limit", 100)
+
+	// Получаем список базовых рейсов
+	flights, err := h.flightsService.List(r.Context(), date, limit)
+	if err != nil {
+		writeError(w, r, err)
+		return
 	}
 
-	writeJSON(w, http.StatusOK, out)
+	// ✅ Конвертируем базовые Flight в DTO
+	response := make([]dto.FlightResponse, 0, len(flights))
+	for _, flight := range flights {
+		response = append(response, dto.FlightFromModel(flight))
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }
 
+// GetFlightByID возвращает детальную информацию о рейсе
 func (h *Handler) GetFlightByID(w http.ResponseWriter, r *http.Request) {
 	id, err := pathID(r, "id")
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad id"})
+		writeError(w, r, err)
 		return
 	}
 
-	item, err := h.flightsService.GetByID(r.Context(), id)
+	// Получаем FlightDetails (с пассажирами)
+	flightDetails, err := h.flightsService.GetByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
 
-	resp := dto.FlightFromModel(item.Flight)
-	writeJSON(w, http.StatusOK, resp)
+	// ✅ Конвертируем FlightDetails в DTO
+	response := dto.FlightDetailsFromModel(flightDetails)
+
+	writeJSON(w, http.StatusOK, response)
 }

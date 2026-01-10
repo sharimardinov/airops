@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
@@ -25,8 +27,12 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	})
 
 	if errors.Is(err, context.Canceled) {
-		// клиент сам отменил — это не ошибка сервера
 		writeJSON(w, 499, apiError{Error: "client closed request"})
+		return
+	}
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeJSON(w, http.StatusNotFound, apiError{Error: "not found"})
 		return
 	}
 
@@ -38,6 +44,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, domain.ErrInvalidArgument):
 		writeJSON(w, http.StatusBadRequest, apiError{Error: "bad request"})
+	case errors.Is(err, domain.ErrBadRequest):
+		writeJSON(w, http.StatusBadRequest, apiError{Error: err.Error()})
 	case errors.Is(err, domain.ErrNotFound):
 		writeJSON(w, http.StatusNotFound, apiError{Error: "not found"})
 	default:
