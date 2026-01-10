@@ -26,9 +26,8 @@ select
 from bookings.flights f
 join bookings.routes r
   on r.route_no = f.route_no
- and (f.scheduled_departure <@ r.validity)
-WHERE ($1::timestamptz = '0001-01-01'::timestamptz or f.scheduled_departure >= $1)
-  AND ($2::timestamptz = '0001-01-01'::timestamptz or f.scheduled_departure <  $2)
+where ($1::timestamptz = '0001-01-01'::timestamptz or f.scheduled_departure >= $1)
+  and ($2::timestamptz = '0001-01-01'::timestamptz or f.scheduled_departure <  $2)
 group by r.departure_airport, r.arrival_airport
 order by flights_cnt desc
 limit $3;
