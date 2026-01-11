@@ -1,11 +1,14 @@
 package repositories
 
 import (
+	"airops/internal/app/apperr"
 	"airops/internal/domain/models"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,7 +20,7 @@ func NewFlightsRepo(pool *pgxpool.Pool) *FlightsRepo {
 	return &FlightsRepo{pool: pool}
 }
 
-// GetByID получает рейс по ID (только базовые поля из таблицы flights)
+// получает рейс по ID (только базовые поля из таблицы flights)
 func (r *FlightsRepo) GetByID(ctx context.Context, id int64) (models.Flight, error) {
 	query := `
 		SELECT 
@@ -34,14 +37,13 @@ func (r *FlightsRepo) GetByID(ctx context.Context, id int64) (models.Flight, err
 
 	var f models.Flight
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&f.FlightID, // ✅ было &f.ID
+		&f.FlightID,
 		&f.RouteNo,
 		&f.Status,
 		&f.ScheduledDeparture,
 		&f.ScheduledArrival,
 		&f.ActualDeparture,
 		&f.ActualArrival,
-		// ✅ НЕ сканируем DepartureAirport и ArrivalAirport - их нет в базовом Flight
 	)
 	if err != nil {
 		return models.Flight{}, fmt.Errorf("get flight by id: %w", err)
@@ -70,14 +72,15 @@ func (r *FlightsRepo) List(
 		FROM bookings.flights
 		WHERE scheduled_departure >= $1
 		  AND scheduled_departure < $2
-		ORDER BY scheduled_departure  -- ✅ ИСПРАВЛЕНО: было flight_no
+		ORDER BY scheduled_departure 	
 		OFFSET $3 LIMIT $4
 `
 
-	rows, err := r.pool.Query(ctx, q, from, to, limit, offset)
+	rows, err := r.pool.Query(ctx, q, from, to, offset, limit)
 	if err != nil {
-		return nil, fmt.Errorf("list flights: %w", err)
+		return nil, err
 	}
+
 	defer rows.Close()
 
 	out := make([]models.Flight, 0, limit)
@@ -104,7 +107,6 @@ func (r *FlightsRepo) List(
 	return out, nil
 }
 
-// ✅ ДОБАВЬ НОВЫЙ МЕТОД Search для полноценного поиска с JOIN
 func (r *FlightsRepo) Search(ctx context.Context, params models.FlightSearchParams) ([]models.FlightDetails, error) {
 	query := `
 		SELECT 
@@ -168,15 +170,20 @@ func (r *FlightsRepo) Search(ctx context.Context, params models.FlightSearchPara
 			&fd.AirplaneModel,
 			&fd.Duration,
 		)
-		if err != nil {
-			return nil, fmt.Errorf("scan flight: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperr.NotFound("scan flight", err)
 		}
-
+		if err != nil {
+			return nil, apperr.Internal("db error", err)
+		}
 		flights = append(flights, fd)
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.NotFound("rows error", err)
+	}
+	if err != nil {
+		return nil, apperr.Internal("db error", err)
 	}
 
 	return flights, nil

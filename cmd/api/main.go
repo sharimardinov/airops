@@ -1,4 +1,3 @@
-// cmd/api/main.go
 package main
 
 import (
@@ -10,9 +9,17 @@ import (
 	"syscall"
 	"time"
 
+	_ "airops/docs"
 	"airops/internal/app"
 )
 
+// @title           airops API
+// @version         1.0
+// @description     Demo API for flights/bookings/stats
+// @BasePath        /api/v1
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
@@ -29,7 +36,6 @@ func main() {
 
 	a := app.New(pool, ":8080")
 
-	// старт
 	go func() {
 		if err := a.Run(); err != nil {
 			log.Fatal(err)

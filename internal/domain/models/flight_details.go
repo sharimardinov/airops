@@ -1,4 +1,3 @@
-// flight_details.go
 package models
 
 import "time"

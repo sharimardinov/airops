@@ -1,4 +1,3 @@
-// internal/transport/http/handlers/search.go
 package handlers
 
 import (
@@ -10,7 +9,6 @@ import (
 
 // SearchFlights обрабатывает поиск рейсов
 func (h *Handler) SearchFlights(w http.ResponseWriter, r *http.Request) {
-	// Парсим параметры поиска
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 	dateStr := r.URL.Query().Get("date")
@@ -22,14 +20,12 @@ func (h *Handler) SearchFlights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Парсим дату
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		writeError(w, r, fmt.Errorf("invalid date format (use YYYY-MM-DD)"))
 		return
 	}
 
-	// По умолчанию Economy
 	if fareClass == "" {
 		fareClass = "Economy"
 	}
@@ -42,13 +38,11 @@ func (h *Handler) SearchFlights(w http.ResponseWriter, r *http.Request) {
 		FareClass:        fareClass,
 	}
 
-	// Выполняем поиск
 	results, err := h.searchService.SearchFlights(r.Context(), params)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
 
-	// ✅ FlightSearchResult уже содержит FlightDetails, просто возвращаем
 	writeJSON(w, http.StatusOK, results)
 }

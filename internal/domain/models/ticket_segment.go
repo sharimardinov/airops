@@ -2,7 +2,6 @@ package models
 
 import "github.com/shopspring/decimal"
 
-// TicketSegment - привязка билета к рейсу
 type TicketSegment struct {
 	TicketNo       string          `json:"ticket_no"`
 	FlightID       int64           `json:"flight_id"`

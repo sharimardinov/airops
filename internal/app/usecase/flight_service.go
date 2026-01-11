@@ -1,6 +1,3 @@
-// ================================================
-// internal/application/usecase/flight_service.go
-// ================================================
 package usecase
 
 import (
@@ -23,22 +20,18 @@ func NewFlightsService(flightsRepo *repositories.FlightsRepo, passengersRepo dom
 	}
 }
 
-// GetByID получает детальную информацию о рейсе
+// получает детальную информацию о рейсе
 func (s *FlightsService) GetByID(ctx context.Context, id int64) (models.FlightDetails, error) {
-	// Получаем базовую информацию о рейсе
 	flight, err := s.flightsRepo.GetByID(ctx, id)
 	if err != nil {
 		return models.FlightDetails{}, MapStoreErr(err)
 	}
 
-	// ✅ ИСПРАВЛЕНО: добавлены недостающие параметры
-	// Сигнатура: ListByFlightID(ctx, flightID, offset, limit)
 	passengers, err := s.passengersRepo.ListByFlightID(ctx, id, 0, 1000)
 	if err != nil {
 		return models.FlightDetails{}, MapStoreErr(err)
 	}
 
-	// Создаем FlightDetails
 	details := models.FlightDetails{
 		FlightID:           flight.FlightID,
 		RouteNo:            flight.RouteNo,
@@ -53,21 +46,17 @@ func (s *FlightsService) GetByID(ctx context.Context, id int64) (models.FlightDe
 	return details, nil
 }
 
-// List возвращает список рейсов
-func (s *FlightsService) List(ctx context.Context, date time.Time, limit int) ([]models.Flight, error) {
-	// Сигнатура: List(ctx, dateFrom, dateTo, offset, limit)
+// возвращает список рейсов
+func (s *FlightsService) List(ctx context.Context, date time.Time, limit, offset int) ([]models.Flight, error) {
+	// !!!date приходит как time.Parse -> UTC
+	loc := time.Local
 
-	// Вариант 1: Если нужны рейсы только за один день
-	dateEnd := date.Add(24 * time.Hour)
-	flights, err := s.flightsRepo.List(ctx, date, dateEnd, 0, limit)
+	from := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, loc)
+	to := from.Add(24 * time.Hour)
 
-	if err != nil {
-		return nil, MapStoreErr(err)
-	}
-	return flights, nil
+	return s.flightsRepo.List(ctx, from, to, limit, offset)
 }
 
-// Вспомогательный метод (если нужен)
 func (s *FlightsService) listByDate(ctx context.Context, date time.Time, limit int) ([]models.Flight, error) {
 	dateEnd := date.Add(24 * time.Hour)
 	return s.flightsRepo.List(ctx, date, dateEnd, 0, limit)

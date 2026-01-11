@@ -1,7 +1,5 @@
 package dto
 
-import "airops/internal/domain/models"
-
 type CreateBookingRequest struct {
 	FlightID      int      `json:"flight_id" validate:"required"`
 	PassengerName string   `json:"passenger_name" validate:"required"`
@@ -23,9 +21,4 @@ type TicketDetails struct {
 	PassengerName string `json:"passenger_name"`
 	SeatNo        string `json:"seat_no"`
 	FareClass     string `json:"fare_class"`
-}
-
-func FromBooking(b *models.Booking) BookingResponse {
-	return BookingResponse{
-		BookRef: b.BookRef}
 }

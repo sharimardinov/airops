@@ -2,7 +2,7 @@
 package app
 
 import (
-	"airops/internal/application/usecase"
+	usecase2 "airops/internal/app/usecase"
 	"airops/internal/infrastructure/postgres/repositories"
 	"context"
 	"fmt"
@@ -26,7 +26,6 @@ type App struct {
 }
 
 func New(pool *pgxpool.Pool, addr string) *App {
-	// Repositories
 	flightsRepo := repositories.NewFlightsRepo(pool)
 	passengersRepo := repositories.NewPassengersRepo(pool)
 	statsRoutesRepo := repositories.NewStatsRoutesRepo(pool)
@@ -37,17 +36,15 @@ func New(pool *pgxpool.Pool, addr string) *App {
 	airportsRepo := repositories.NewAirportsRepo(pool)
 	airplanesRepo := repositories.NewAirplanesRepo(pool) // ✨ NEW
 
-	// Services
-	flightsService := usecase.NewFlightsService(flightsRepo, passengersRepo)
-	passengersService := usecase.NewPassengersService(passengersRepo)
-	statsService := usecase.NewStatsRoutesService(statsRoutesRepo)
-	healthService := usecase.NewHealthService(healthRepo)
-	bookingService := usecase.NewBookingService(bookingsRepo, flightsRepo, seatsRepo, ticketsRepo)
-	searchService := usecase.NewSearchService(flightsRepo, seatsRepo)
-	airportsService := usecase.NewAirportsService(airportsRepo)
-	airplanesService := usecase.NewAirplanesService(airplanesRepo) // ✨ NEW
+	flightsService := usecase2.NewFlightsService(flightsRepo, passengersRepo)
+	passengersService := usecase2.NewPassengersService(passengersRepo)
+	statsService := usecase2.NewStatsRoutesService(statsRoutesRepo)
+	healthService := usecase2.NewHealthService(healthRepo)
+	bookingService := usecase2.NewBookingService(bookingsRepo, flightsRepo, seatsRepo, ticketsRepo)
+	searchService := usecase2.NewSearchService(flightsRepo, seatsRepo)
+	airportsService := usecase2.NewAirportsService(airportsRepo)
+	airplanesService := usecase2.NewAirplanesService(airplanesRepo) // ✨ NEW
 
-	// Handlers
 	h := handlers.New(
 		pool,
 		flightsService,
@@ -62,13 +59,12 @@ func New(pool *pgxpool.Pool, addr string) *App {
 
 	router := transporthttp.New(h)
 
-	// Server
 	server := &http.Server{
 		Addr:         addr,
 		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 2 * time.Minute,
+		IdleTimeout:  2 * time.Minute,
 	}
 
 	return &App{
@@ -78,11 +74,10 @@ func New(pool *pgxpool.Pool, addr string) *App {
 }
 
 func (a *App) Run() error {
-	// Запуск сервера в горутине
 	go func() {
-		log.Printf("🚀 Starting server on %s", a.server.Addr)
+		log.Printf("Starting server on %s", a.server.Addr)
 		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("❌ Server failed: %v", err)
+			log.Fatalf("Server failed: %v", err)
 		}
 	}()
 
@@ -91,7 +86,7 @@ func (a *App) Run() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("🛑 Shutting down server...")
+	log.Println("Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -100,17 +95,14 @@ func (a *App) Run() error {
 		return fmt.Errorf("shutdown failed: %w", err)
 	}
 
-	log.Println("✅ Server stopped gracefully")
+	log.Println("Server stopped gracefully")
 	return nil
 }
 
 func (a *App) Shutdown(ctx context.Context) error {
-	// Закрываем HTTP сервер
 	if err := a.server.Shutdown(ctx); err != nil {
 		return fmt.Errorf("http server shutdown: %w", err)
 	}
-
-	// Закрываем пул соединений с БД
 	a.pool.Close()
 
 	return nil

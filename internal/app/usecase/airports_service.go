@@ -1,4 +1,3 @@
-// internal/usecase/airports_service.go
 package usecase
 
 import (

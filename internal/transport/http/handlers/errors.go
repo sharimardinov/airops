@@ -3,25 +3,30 @@ package handlers
 import (
 	"airops/internal/domain"
 	"airops/internal/infrastructure/observability/logger"
-	"airops/internal/transport/http/middleware"
 	"context"
 	"errors"
+	"log"
 	"net/http"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
 )
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	rid := middleware.GetReqID(r.Context())
+
 	if errors.Is(err, domain.ErrBadRequest) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
 	}
+
+	log.Printf("handler error rid=%s err=%T: %v", rid, err, err)
+
 	lg := logger.LoggerFrom(r.Context())
 	lg.Error(logger.LogEvent{
 		Msg:    "handler_error",
-		RID:    middleware.GetRequestID(r.Context()),
+		RID:    middleware.GetReqID(r.Context()),
 		Method: r.Method,
-		Route:  middleware.RoutePattern(r),
 		Path:   r.URL.Path,
 		Err:    err.Error(),
 	})

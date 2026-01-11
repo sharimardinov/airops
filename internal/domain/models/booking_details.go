@@ -1,4 +1,3 @@
-// internal/domain/models/booking_details.go
 package models
 
 import (
@@ -7,7 +6,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// BookingDetails - полная информация о бронировании с билетами и рейсами
 type BookingDetails struct {
 	BookRef     string          `json:"book_ref"`
 	BookDate    time.Time       `json:"book_date"`
@@ -15,7 +13,6 @@ type BookingDetails struct {
 	Tickets     []TicketDetails `json:"tickets"`
 }
 
-// TicketDetails - детальная информация о билете
 type TicketDetails struct {
 	TicketNo      string       `json:"ticket_no"`
 	PassengerID   string       `json:"passenger_id"`
@@ -23,7 +20,6 @@ type TicketDetails struct {
 	Flights       []FlightInfo `json:"flights"`
 }
 
-// FlightInfo - информация о рейсе в билете
 type FlightInfo struct {
 	FlightID           int64     `json:"flight_id"`
 	RouteNo            string    `json:"route_no"`

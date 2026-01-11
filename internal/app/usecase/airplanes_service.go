@@ -1,4 +1,3 @@
-// internal/app/usecase/airplanes_service.go
 package usecase
 
 import (
@@ -18,7 +17,7 @@ func NewAirplanesService(airplanesRepo *repositories.AirplanesRepo) *AirplanesSe
 	}
 }
 
-// GetByCode получает самолет по коду
+// получает самолет по коду
 func (s *AirplanesService) GetByCode(ctx context.Context, code string) (*models.Airplane, error) {
 	airplane, err := s.airplanesRepo.GetByCode(ctx, code)
 	if err != nil {
@@ -27,7 +26,7 @@ func (s *AirplanesService) GetByCode(ctx context.Context, code string) (*models.
 	return airplane, nil
 }
 
-// List возвращает список всех самолетов
+// возвращает список всех самолетов
 func (s *AirplanesService) List(ctx context.Context) ([]models.Airplane, error) {
 	airplanes, err := s.airplanesRepo.List(ctx)
 	if err != nil {
@@ -36,7 +35,7 @@ func (s *AirplanesService) List(ctx context.Context) ([]models.Airplane, error) 
 	return airplanes, nil
 }
 
-// GetWithSeats получает самолет с раскладкой мест
+// получает самолет с раскладкой мест
 func (s *AirplanesService) GetWithSeats(ctx context.Context, code string) (*models.AirplaneWithSeats, error) {
 	airplane, err := s.airplanesRepo.GetWithSeats(ctx, code)
 	if err != nil {
@@ -45,7 +44,7 @@ func (s *AirplanesService) GetWithSeats(ctx context.Context, code string) (*mode
 	return airplane, nil
 }
 
-// GetStats получает статистику по самолету
+// получает статистику по самолету
 func (s *AirplanesService) GetStats(ctx context.Context, code string) (*models.AirplaneStats, error) {
 	stats, err := s.airplanesRepo.GetStats(ctx, code)
 	if err != nil {

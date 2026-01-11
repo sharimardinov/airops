@@ -26,13 +26,9 @@ func RequestID() func(http.Handler) http.Handler {
 				id = newRequestID()
 			}
 
-			// кладём в ctx
 			ctx := context.WithValue(r.Context(), requestIDKey, id)
 			r = r.WithContext(ctx)
-
-			// отдаём клиенту обратно
 			w.Header().Set(requestIDHeader, id)
-
 			next.ServeHTTP(w, r)
 		})
 	}

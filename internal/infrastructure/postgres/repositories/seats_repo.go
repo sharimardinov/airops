@@ -38,8 +38,6 @@ select not exists (
 }
 
 func (r *SeatsRepo) GetAvailableCount(ctx context.Context, flightID int64, fareClass string) (int, error) {
-	// Вариант без f.aircraft_code:
-	// берём самолёт из routes (через route_no + validity)
 	const q = `
 select count(*)::int
 from bookings.flights f
@@ -71,10 +69,7 @@ func (r *SeatsRepo) Reserve(ctx context.Context, tx pgx.Tx, flightID int64, tick
 	}
 
 	const q = `
--- 1) Лочим конкретный flight_id на время транзакции (дешево и эффективно)
 select pg_advisory_xact_lock($1);
-
--- 2) Пытаемся занять место. Если место уже занято — ничего не вставится.
 with next_no as (
   select coalesce(max(boarding_no), 0) + 1 as n
   from bookings.boarding_passes

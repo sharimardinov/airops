@@ -1,4 +1,3 @@
-// internal/usecase/booking_service.go
 package usecase
 
 import (
@@ -35,9 +34,9 @@ func NewBookingService(
 	}
 }
 
-// Create создает новое бронирование
+// создает новое бронирование
 func (s *BookingService) Create(ctx context.Context, req models.BookingRequest) (*models.BookingDetails, error) {
-	// 1. Проверяем доступность рейса
+	// Проверяем доступность рейса
 	flight, err := s.flightsRepo.GetByID(ctx, req.FlightID)
 	if err != nil {
 		return nil, fmt.Errorf("flight not found: %w", err)
@@ -53,7 +52,7 @@ func (s *BookingService) Create(ctx context.Context, req models.BookingRequest) 
 		return nil, fmt.Errorf("flight has already departed")
 	}
 
-	// 2. Проверяем доступность мест
+	// Проверяем доступность мест
 	if len(req.Seats) == 0 {
 		return nil, fmt.Errorf("no seats selected")
 	}
@@ -68,21 +67,21 @@ func (s *BookingService) Create(ctx context.Context, req models.BookingRequest) 
 		}
 	}
 
-	// 3. Рассчитываем стоимость
+	// Рассчитываем стоимость
 	totalAmount := s.calculatePrice(req.Seats, req.FareClass)
 
-	// 4. Начинаем транзакцию
+	// Начинаем транзакцию
 	tx, err := s.bookingsRepo.BeginTx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
-	// 5. Генерируем уникальные идентификаторы
+	// Генерируем уникальные идентификаторы
 	bookRef := generateBookRef()
 	ticketNo := generateTicketNo()
 
-	// 6. Создаем бронирование
+	// Создаем бронирование
 	booking := &models.Booking{
 		BookRef:     bookRef,
 		BookDate:    time.Now(),
@@ -94,7 +93,7 @@ func (s *BookingService) Create(ctx context.Context, req models.BookingRequest) 
 		return nil, fmt.Errorf("create booking: %w", err)
 	}
 
-	// 7. Создаем билет
+	// Создаем билет
 	ticket := &models.Ticket{
 		TicketNo:      ticketNo,
 		BookRef:       bookRef,
@@ -108,7 +107,7 @@ func (s *BookingService) Create(ctx context.Context, req models.BookingRequest) 
 		return nil, fmt.Errorf("create ticket: %w", err)
 	}
 
-	// 8. Создаем сегмент (привязка билета к рейсу)
+	// Создаем сегмент (привязка билета к рейсу)
 	segment := &models.TicketSegment{
 		TicketNo:       ticketNo,
 		FlightID:       req.FlightID,
@@ -121,7 +120,7 @@ func (s *BookingService) Create(ctx context.Context, req models.BookingRequest) 
 		return nil, fmt.Errorf("create segment: %w", err)
 	}
 
-	// 9. Резервируем места (создаем boarding passes)
+	// Резервируем места (создаем boarding passes)
 	for _, seatNo := range req.Seats {
 		err = s.seatsRepo.Reserve(ctx, tx, req.FlightID, ticketNo, seatNo)
 		if err != nil {
@@ -129,12 +128,12 @@ func (s *BookingService) Create(ctx context.Context, req models.BookingRequest) 
 		}
 	}
 
-	// 10. Коммитим транзакцию
+	// Коммитим транзакцию
 	if err = tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
-	// 11. Получаем полные детали бронирования
+	// Получаем полные детали бронирования
 	details, err := s.bookingsRepo.GetWithDetails(ctx, bookRef)
 	if err != nil {
 		return nil, fmt.Errorf("get booking details: %w", err)
@@ -143,7 +142,7 @@ func (s *BookingService) Create(ctx context.Context, req models.BookingRequest) 
 	return details, nil
 }
 
-// GetByRef получает бронирование по номеру
+// получает бронирование по номеру
 func (s *BookingService) GetByRef(ctx context.Context, bookRef string) (*models.BookingDetails, error) {
 	details, err := s.bookingsRepo.GetWithDetails(ctx, bookRef)
 	if err != nil {
@@ -190,7 +189,7 @@ func (s *BookingService) Cancel(ctx context.Context, bookRef string) error {
 	return nil
 }
 
-// calculatePrice рассчитывает стоимость билетов
+// рассчитывает стоимость билетов
 func (s *BookingService) calculatePrice(seats []string, fareClass string) decimal.Decimal {
 	// Базовые цены по классам обслуживания
 	basePrices := map[string]float64{
@@ -210,7 +209,7 @@ func (s *BookingService) calculatePrice(seats []string, fareClass string) decima
 	return decimal.NewFromFloat(totalPrice)
 }
 
-// generateBookRef генерирует уникальный 6-символьный код бронирования
+// генерирует уникальный 6-символьный код бронирования
 func generateBookRef() string {
 	b := make([]byte, 4)
 	rand.Read(b)
@@ -219,7 +218,7 @@ func generateBookRef() string {
 	return strings.ToUpper(encoded[:6])
 }
 
-// generateTicketNo генерирует уникальный номер билета (13 цифр)
+// генерирует уникальный номер билета (13 цифр)
 func generateTicketNo() string {
 	// Формат: YYYYMMDDHHMMSS (timestamp)
 	return time.Now().Format("20060102150405") + fmt.Sprintf("%03d", time.Now().Nanosecond()/1000000)

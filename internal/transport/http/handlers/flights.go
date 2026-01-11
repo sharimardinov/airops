@@ -1,4 +1,3 @@
-// internal/transport/http/handlers/flights.go
 package handlers
 
 import (
@@ -9,7 +8,6 @@ import (
 
 // ListFlights возвращает список рейсов
 func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
-	// Парсим дату из query параметра
 	dateStr := r.URL.Query().Get("date")
 	if dateStr == "" {
 		dateStr = time.Now().Format("2006-01-02")
@@ -22,20 +20,18 @@ func (h *Handler) ListFlights(w http.ResponseWriter, r *http.Request) {
 	}
 
 	limit := qInt(r, "limit", 100)
+	offset := qInt(r, "offset", 0)
 
-	// Получаем список базовых рейсов
-	flights, err := h.flightsService.List(r.Context(), date, limit)
+	flights, err := h.flightsService.List(r.Context(), date, limit, offset) // <-- добавь offset
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
 
-	// ✅ Конвертируем базовые Flight в DTO
 	response := make([]dto.FlightResponse, 0, len(flights))
 	for _, flight := range flights {
 		response = append(response, dto.FlightFromModel(flight))
 	}
-
 	writeJSON(w, http.StatusOK, response)
 }
 

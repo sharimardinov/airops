@@ -1,4 +1,3 @@
-// internal/domain/models/postgres/repositories/tickets_repo.go
 package repositories
 
 import (
@@ -18,7 +17,7 @@ func NewTicketsRepo(pool *pgxpool.Pool) *TicketsRepo {
 	return &TicketsRepo{pool: pool}
 }
 
-// Create создает билет в транзакции
+// создает билет в транзакции
 func (r *TicketsRepo) Create(ctx context.Context, tx pgx.Tx, ticket *models.Ticket) error {
 	query := `
 		INSERT INTO bookings.tickets 
@@ -40,7 +39,7 @@ func (r *TicketsRepo) Create(ctx context.Context, tx pgx.Tx, ticket *models.Tick
 	return nil
 }
 
-// CreateSegment создает сегмент билета (привязка к рейсу)
+// создает сегмент билета (привязка к рейсу)
 func (r *TicketsRepo) CreateSegment(ctx context.Context, tx pgx.Tx, segment *models.TicketSegment) error {
 	query := `
 		INSERT INTO bookings.segments 
@@ -61,7 +60,7 @@ func (r *TicketsRepo) CreateSegment(ctx context.Context, tx pgx.Tx, segment *mod
 	return nil
 }
 
-// GetByNumber получает билет по номеру
+// получает билет по номеру
 func (r *TicketsRepo) GetByNumber(ctx context.Context, ticketNo string) (*models.Ticket, error) {
 	query := `
 		SELECT ticket_no, book_ref, passenger_id, passenger_name, outbound
@@ -84,7 +83,7 @@ func (r *TicketsRepo) GetByNumber(ctx context.Context, ticketNo string) (*models
 	return &ticket, nil
 }
 
-// GetByBooking получает все билеты по номеру бронирования
+// получает все билеты по номеру бронирования
 func (r *TicketsRepo) GetByBooking(ctx context.Context, bookRef string) ([]models.Ticket, error) {
 	query := `
 		SELECT ticket_no, book_ref, passenger_id, passenger_name, outbound
@@ -122,7 +121,7 @@ func (r *TicketsRepo) GetByBooking(ctx context.Context, bookRef string) ([]model
 	return tickets, nil
 }
 
-// GetSegmentsByTicket получает все сегменты (рейсы) для билета
+// получает все сегменты (рейсы) для билета
 func (r *TicketsRepo) GetSegmentsByTicket(ctx context.Context, ticketNo string) ([]models.TicketSegment, error) {
 	query := `
 		SELECT ticket_no, flight_id, fare_conditions, price
@@ -159,7 +158,7 @@ func (r *TicketsRepo) GetSegmentsByTicket(ctx context.Context, ticketNo string) 
 	return segments, nil
 }
 
-// GetByPassenger получает все билеты пассажира
+// получает все билеты пассажира
 func (r *TicketsRepo) GetByPassenger(ctx context.Context, passengerID string) ([]models.Ticket, error) {
 	query := `
 		SELECT ticket_no, book_ref, passenger_id, passenger_name, outbound
@@ -197,7 +196,7 @@ func (r *TicketsRepo) GetByPassenger(ctx context.Context, passengerID string) ([
 	return tickets, nil
 }
 
-// Delete удаляет билет в транзакции
+// удаляет билет в транзакции
 func (r *TicketsRepo) Delete(ctx context.Context, tx pgx.Tx, ticketNo string) error {
 	// Сначала удаляем сегменты
 	deleteSegments := `

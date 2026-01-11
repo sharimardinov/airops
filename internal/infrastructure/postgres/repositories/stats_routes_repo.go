@@ -19,18 +19,28 @@ func NewStatsRoutesRepo(pool *pgxpool.Pool) *StatsRoutesRepo {
 
 func (r *StatsRoutesRepo) TopRoutes(ctx context.Context, from, to time.Time, limit int) ([]models.RouteStat, error) {
 	const q = `
-select
+	WITH top AS (
+  SELECT f.route_no, count(*)::bigint AS flights_cnt
+  FROM bookings.flights f
+  WHERE f.scheduled_departure >= $1 AND f.scheduled_departure < $2
+  GROUP BY f.route_no
+  ORDER BY flights_cnt DESC
+  LIMIT $3
+)
+SELECT
   r.departure_airport,
   r.arrival_airport,
-  count(*) as flights_cnt
-from bookings.flights f
-join bookings.routes r
-  on r.route_no = f.route_no
-where ($1::timestamptz = '0001-01-01'::timestamptz or f.scheduled_departure >= $1)
-  and ($2::timestamptz = '0001-01-01'::timestamptz or f.scheduled_departure <  $2)
-group by r.departure_airport, r.arrival_airport
-order by flights_cnt desc
-limit $3;
+  top.flights_cnt
+FROM top
+JOIN LATERAL (
+  SELECT departure_airport, arrival_airport
+  FROM bookings.routes r
+  WHERE r.route_no = top.route_no
+    AND r.validity && tstzrange($1, $2, '[)')   -- пересекается с периодом
+  ORDER BY upper(r.validity) DESC
+  LIMIT 1
+) r ON true
+ORDER BY top.flights_cnt DESC;
 `
 
 	rows, err := r.pool.Query(ctx, q, from, to, limit)

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,18 +24,14 @@ func qInt(r *http.Request, key string, def int) int {
 	return n
 }
 
-func qDateRequired(r *http.Request, key string) (time.Time, error) {
-	s := r.URL.Query().Get(key)
-	if s == "" {
-		return time.Time{}, fmt.Errorf("missing query param: %s", key)
+func qDateOptional(r *http.Request, key string) (time.Time, bool, error) {
+	v := r.URL.Query().Get(key)
+	if v == "" {
+		return time.Time{}, false, nil
 	}
-
-	// ожидаем YYYY-MM-DD
-	t, err := time.Parse("2006-01-02", s)
+	t, err := time.Parse("2006-01-02", v)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid %s (expected YYYY-MM-DD): %w", key, err)
+		return time.Time{}, true, err
 	}
-
-	// делаем timestamptz-диапазон: from inclusive, to exclusive
-	return t, nil
+	return t, true, nil
 }

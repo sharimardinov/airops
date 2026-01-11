@@ -1,11 +1,13 @@
-// internal/domain/postgres/repositories/airplanes_repo.go
 package repositories
 
 import (
+	"airops/internal/app/apperr"
 	"airops/internal/domain/models"
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,7 +19,7 @@ func NewAirplanesRepo(pool *pgxpool.Pool) *AirplanesRepo {
 	return &AirplanesRepo{pool: pool}
 }
 
-// GetByCode получает самолет по коду
+// получает самолет по коду
 func (r *AirplanesRepo) GetByCode(ctx context.Context, code string) (*models.Airplane, error) {
 	query := `
 		SELECT airplane_code, model, range, speed
@@ -32,14 +34,17 @@ func (r *AirplanesRepo) GetByCode(ctx context.Context, code string) (*models.Air
 		&airplane.Range,
 		&airplane.Speed,
 	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.NotFound("airplane not found", err)
+	}
 	if err != nil {
-		return nil, fmt.Errorf("get airplane: %w", err)
+		return nil, apperr.Internal("db error", err)
 	}
 
 	return &airplane, nil
 }
 
-// List возвращает все самолеты
+// возвращает все самолеты
 func (r *AirplanesRepo) List(ctx context.Context) ([]models.Airplane, error) {
 	query := `
 		SELECT airplane_code, model, range, speed
@@ -71,7 +76,7 @@ func (r *AirplanesRepo) List(ctx context.Context) ([]models.Airplane, error) {
 	return airplanes, rows.Err()
 }
 
-// GetWithSeats получает самолет с раскладкой мест
+// получает самолет с раскладкой мест
 func (r *AirplanesRepo) GetWithSeats(ctx context.Context, code string) (*models.AirplaneWithSeats, error) {
 	// Получаем самолет
 	airplane, err := r.GetByCode(ctx, code)
@@ -110,7 +115,7 @@ func (r *AirplanesRepo) GetWithSeats(ctx context.Context, code string) (*models.
 	}, nil
 }
 
-// GetStats возвращает статистику по самолету
+// возвращает статистику по самолету
 func (r *AirplanesRepo) GetStats(ctx context.Context, code string) (*models.AirplaneStats, error) {
 	query := `
 WITH seats AS (

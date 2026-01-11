@@ -1,4 +1,3 @@
-// internal/domain/http/handlers/airplanes.go
 package handlers
 
 import (
@@ -8,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// ListAirplanes возвращает список всех самолетов
+// возвращает список всех самолетов
 func (h *Handler) ListAirplanes(w http.ResponseWriter, r *http.Request) {
 	airplanes, err := h.airplanesService.List(r.Context())
 	if err != nil {
@@ -19,7 +18,7 @@ func (h *Handler) ListAirplanes(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, airplanes)
 }
 
-// GetAirplane получает самолет по коду
+// получает самолет по коду
 func (h *Handler) GetAirplane(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 	if code == "" {
@@ -36,7 +35,7 @@ func (h *Handler) GetAirplane(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, airplane)
 }
 
-// GetAirplaneWithSeats получает самолет с раскладкой мест
+// получает самолет с раскладкой мест
 func (h *Handler) GetAirplaneWithSeats(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 	if code == "" {
@@ -53,7 +52,7 @@ func (h *Handler) GetAirplaneWithSeats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, airplane)
 }
 
-// GetAirplaneStats получает статистику по самолету
+// получает статистику по самолету
 func (h *Handler) GetAirplaneStats(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 	if code == "" {

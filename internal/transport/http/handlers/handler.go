@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"airops/internal/application/usecase"
+	usecase2 "airops/internal/app/usecase"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -9,14 +9,14 @@ import (
 
 type Handler struct {
 	pool              *pgxpool.Pool
-	flightsService    *usecase.FlightsService
-	passengersService *usecase.PassengersService
-	statsService      *usecase.StatsRoutesService
-	healthService     *usecase.HealthService
-	bookingService    *usecase.BookingService
-	searchService     *usecase.SearchService
-	airportsService   *usecase.AirportsService
-	airplanesService  *usecase.AirplanesService
+	flightsService    *usecase2.FlightsService
+	passengersService *usecase2.PassengersService
+	statsService      *usecase2.StatsRoutesService
+	healthService     *usecase2.HealthService
+	bookingService    *usecase2.BookingService
+	searchService     *usecase2.SearchService
+	airportsService   *usecase2.AirportsService
+	airplanesService  *usecase2.AirplanesService
 }
 
 func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -26,14 +26,14 @@ func (h *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 func New(
 	pool *pgxpool.Pool,
-	flightsService *usecase.FlightsService,
-	passengersService *usecase.PassengersService,
-	statsService *usecase.StatsRoutesService,
-	healthService *usecase.HealthService,
-	bookingService *usecase.BookingService,
-	searchService *usecase.SearchService,
-	airportsService *usecase.AirportsService,
-	airplanesService *usecase.AirplanesService, // ✨ NEW
+	flightsService *usecase2.FlightsService,
+	passengersService *usecase2.PassengersService,
+	statsService *usecase2.StatsRoutesService,
+	healthService *usecase2.HealthService,
+	bookingService *usecase2.BookingService,
+	searchService *usecase2.SearchService,
+	airportsService *usecase2.AirportsService,
+	airplanesService *usecase2.AirplanesService, // ✨ NEW
 ) *Handler {
 	return &Handler{
 		pool:              pool,

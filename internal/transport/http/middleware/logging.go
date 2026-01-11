@@ -4,6 +4,7 @@ import (
 	"airops/internal/infrastructure/observability/logger"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -12,16 +13,20 @@ import (
 
 func Logging() func(http.Handler) http.Handler {
 	lg := logger.NewJSONLogger()
+	logAll := os.Getenv("LOG_HTTP_ALL") == "1"
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			tw := &trackedWriter{ResponseWriter: w}
 
-			// кладём логгер в контекст (чтобы handlers могли писать error-логи)
 			r = r.WithContext(logger.WithLogger(r.Context(), lg))
 
 			next.ServeHTTP(tw, r)
+
+			if !logAll && tw.status < 400 {
+				return
+			}
 
 			status := tw.status
 			if status == 0 {
@@ -57,7 +62,6 @@ func RoutePattern(r *http.Request) string {
 }
 
 func normalizePath(p string) string {
-	// прибиваем //stats/routes
 	for strings.HasPrefix(p, "//") {
 		p = p[1:]
 	}
@@ -68,7 +72,6 @@ func normalizePath(p string) string {
 }
 
 func clientIP(r *http.Request) string {
-	// если потом появится прокси — добавишь X-Forwarded-For
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err == nil {
 		return host

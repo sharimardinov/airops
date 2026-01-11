@@ -1,10 +1,13 @@
 package repositories
 
 import (
+	"airops/internal/app/apperr"
 	"airops/internal/domain/models"
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -16,7 +19,7 @@ func NewAirportsRepo(pool *pgxpool.Pool) *AirportsRepo {
 	return &AirportsRepo{pool: pool}
 }
 
-// GetByCode получает аэропорт по коду
+// получает аэропорт по коду
 func (r *AirportsRepo) GetByCode(ctx context.Context, code string) (*models.Airport, error) {
 	query := `
 		SELECT airport_code, airport_name, city, country, timezone
@@ -32,14 +35,17 @@ func (r *AirportsRepo) GetByCode(ctx context.Context, code string) (*models.Airp
 		&airport.Country,
 		&airport.Timezone,
 	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.NotFound("get airport by code", err)
+	}
 	if err != nil {
-		return nil, fmt.Errorf("get airport by code: %w", err)
+		return nil, apperr.Internal("db error", err)
 	}
 
 	return &airport, nil
 }
 
-// List возвращает список всех аэропортов
+// возвращает список всех аэропортов
 func (r *AirportsRepo) List(ctx context.Context) ([]models.Airport, error) {
 	query := `
 		SELECT airport_code, airport_name, city, country, timezone
@@ -76,7 +82,7 @@ func (r *AirportsRepo) List(ctx context.Context) ([]models.Airport, error) {
 	return airports, nil
 }
 
-// SearchByCity ищет аэропорты по названию города
+// ищет аэропорты по названию города
 func (r *AirportsRepo) SearchByCity(ctx context.Context, city string) ([]models.Airport, error) {
 	query := `
 		SELECT airport_code, airport_name, city, country, timezone
@@ -114,7 +120,7 @@ func (r *AirportsRepo) SearchByCity(ctx context.Context, city string) ([]models.
 	return airports, nil
 }
 
-// SearchByCountry ищет аэропорты по стране
+// ищет аэропорты по стране
 func (r *AirportsRepo) SearchByCountry(ctx context.Context, country string) ([]models.Airport, error) {
 	query := `
   SELECT airport_code, airport_name, city, country, timezone

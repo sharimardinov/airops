@@ -1,4 +1,3 @@
-// internal/app/usecase/search_service.go
 package usecase
 
 import (
@@ -23,7 +22,7 @@ func NewSearchService(
 	}
 }
 
-// SearchFlights ищет рейсы по параметрам
+// ищет рейсы по параметрам
 func (s *SearchService) SearchFlights(ctx context.Context, params models.FlightSearchParams) ([]models.FlightSearchResult, error) {
 	// Валидация
 	if params.DepartureAirport == "" || params.ArrivalAirport == "" {
@@ -36,31 +35,24 @@ func (s *SearchService) SearchFlights(ctx context.Context, params models.FlightS
 		params.Passengers = 1
 	}
 
-	// ✅ ИСПОЛЬЗУЕМ МЕТОД Search (если он есть)
-	// Если метода Search еще нет, используй временное решение ниже
 	flights, err := s.flightsRepo.Search(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("search flights: %w", err)
 	}
 
-	// Обогащаем результаты
 	results := make([]models.FlightSearchResult, 0, len(flights))
 	for _, flight := range flights {
-		// Проверяем доступность мест
 		availableCount, err := s.seatsRepo.GetAvailableCount(ctx, flight.FlightID, params.FareClass)
 		if err != nil {
 			continue
 		}
 
-		// Фильтруем по количеству пассажиров
 		if availableCount < params.Passengers {
 			continue
 		}
 
-		// Рассчитываем цену
 		price := s.calculatePrice(params.Passengers, params.FareClass)
 
-		// ✅ ПРАВИЛЬНО: встраиваем FlightDetails
 		result := models.FlightSearchResult{
 			FlightDetails:  flight,
 			AvailableSeats: availableCount,

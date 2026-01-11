@@ -1,9 +1,7 @@
-// flight_passenger.go
 package models
 
 import "time"
 
-// FlightPassenger — “пассажир на рейсе” (не абстрактный пассажир как человек).
 type FlightPassenger struct {
 	TicketNo       string     `json:"ticket_no"`
 	PassengerName  string     `json:"passenger_name"`

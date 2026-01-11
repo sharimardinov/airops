@@ -46,8 +46,6 @@ func MustLoad() *Config {
 	return cfg
 }
 
-// helpers
-
 func mustEnv(key string) string {
 	v := os.Getenv(key)
 	if v == "" {
